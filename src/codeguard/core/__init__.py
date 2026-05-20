@@ -1,1 +1,1 @@
-"""Core business logic — hashing, scanning, diffing, alert rules."""
+"""Pure business logic: hashing, scanning, change detection, alert rules."""

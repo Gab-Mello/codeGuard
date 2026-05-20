@@ -1,4 +1,4 @@
-"""SHA-256 file hashing — streamed so large files don't load into memory."""
+"""Streamed SHA-256 hashing for files of arbitrary size."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from pathlib import Path
 class FileHasher:
     """Computes SHA-256 hex digests of files using chunked reads.
 
-    The chunk size is configurable but defaults to 64 KiB, which is a good
-    trade-off between syscall overhead and memory footprint for typical
-    project files. I/O errors (missing file, permission denied, etc.) are
-    not caught here — the caller decides policy.
+    The chunk size is configurable but defaults to 64 KiB, which balances
+    syscall overhead against memory footprint for typical project files.
+    I/O errors propagate to the caller, which decides the policy
+    (skip vs. fail) — keeping this class single-purpose.
     """
 
     DEFAULT_CHUNK_SIZE = 64 * 1024

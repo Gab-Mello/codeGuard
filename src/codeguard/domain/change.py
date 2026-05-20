@@ -1,4 +1,4 @@
-"""FileChange — the result of comparing a baseline snapshot to a current one."""
+"""Detected differences between two snapshots."""
 
 from __future__ import annotations
 

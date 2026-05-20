@@ -1,1 +1,1 @@
-"""Persistence layer — SQLite database and repositories."""
+"""SQLite-backed storage for baselines, changes, and alert history."""

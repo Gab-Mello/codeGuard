@@ -1,4 +1,4 @@
-"""Snapshot — the trusted state of a project at a point in time."""
+"""Trusted state of a monitored project at a point in time."""
 
 from __future__ import annotations
 
@@ -10,11 +10,7 @@ from .file_metadata import FileMetadata
 
 @dataclass(slots=True)
 class Snapshot:
-    """A collection of FileMetadata describing a project at one point in time.
-
-    Aggregates FileMetadata (composition/aggregation — an OOP association used
-    later by SnapshotDiffer and the persistence layer).
-    """
+    """A collection of FileMetadata describing a project at one point in time."""
 
     project_root: str
     files: dict[str, FileMetadata] = field(default_factory=dict)

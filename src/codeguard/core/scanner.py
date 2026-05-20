@@ -1,4 +1,4 @@
-"""FileScanner — walks a folder, skips ignored entries, builds a Snapshot."""
+"""Filesystem traversal that produces immutable project snapshots."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from .ignore import IgnoreMatcher
 
 @dataclass(slots=True)
 class ScanResult:
-    """Outcome of a scan: the snapshot plus any files we couldn't read."""
+    """Outcome of a scan: the snapshot plus any files that could not be read."""
 
     snapshot: Snapshot
     skipped: list[tuple[str, str]] = field(default_factory=list)
@@ -21,14 +21,10 @@ class ScanResult:
 
 
 class FileScanner:
-    """Walks a project folder and produces a Snapshot.
+    """Walks a project folder and produces a Snapshot of its files.
 
-    Associations:
-      * uses an `IgnoreMatcher` to prune unwanted paths
-      * uses a `FileHasher` to compute SHA-256 digests
-
-    Both are constructor-injected so tests and future stages can swap
-    behavior (e.g. a stricter ignore set, a faster mock hasher).
+    Collaborators are constructor-injected so they can be replaced — for
+    example with a stricter ignore set or a faster hasher in tests.
     """
 
     def __init__(
@@ -48,7 +44,7 @@ class FileScanner:
         return self._ignore
 
     def scan(self, project_root: Path | str) -> ScanResult:
-        """Scan `project_root` and return the resulting snapshot + skipped list.
+        """Scan `project_root` and return its snapshot together with any skips.
 
         Symlinks are not followed. Directories matching the ignore matcher
         are pruned in-place so we never descend into them. Per-file I/O
@@ -68,7 +64,7 @@ class FileScanner:
             current = Path(dirpath)
             rel_dir = self._relative_posix(current, root)
 
-            # Prune ignored directories in-place so os.walk never descends.
+            # Mutate dirnames in place so os.walk skips ignored subtrees.
             dirnames[:] = [
                 d for d in dirnames
                 if not self._ignore.matches(self._join_rel(rel_dir, d))
@@ -101,8 +97,8 @@ class FileScanner:
     @staticmethod
     def _relative_posix(path: Path, root: Path) -> str:
         rel = path.relative_to(root)
-        # POSIX-style, "" for the root itself
         s = rel.as_posix()
+        # The root itself relativizes to ".", which we surface as "".
         return "" if s == "." else s
 
     @staticmethod

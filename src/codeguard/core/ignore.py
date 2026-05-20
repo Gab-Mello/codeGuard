@@ -1,6 +1,6 @@
-"""IgnoreMatcher — gitignore-flavored path filtering for the scanner.
+"""Path filtering rules used to exclude files and directories from scans.
 
-Patterns are matched against POSIX-style relative paths. Two flavors:
+Patterns are matched against POSIX-style relative paths in two flavors:
 
   * Patterns containing a "/" match the full relative path via fnmatch
     (e.g. "build/*", "src/**/*.bak").
@@ -9,7 +9,7 @@ Patterns are matched against POSIX-style relative paths. Two flavors:
     "*.pyc" matches any segment ending in .pyc).
 
 This is intentionally simpler than full gitignore semantics — enough for
-the requirements (`.git`, `__pycache__`, `node_modules`, `*.pyc`, ...)
+the common cases (`.git`, `__pycache__`, `node_modules`, `*.pyc`, ...)
 without dragging in a parser.
 """
 

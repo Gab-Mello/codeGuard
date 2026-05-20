@@ -1,4 +1,4 @@
-"""Domain layer — pure data classes and value objects (no I/O)."""
+"""Domain entities and value objects shared across all layers."""
 
 from .alert import Alert, Severity
 from .change import ChangeType, FileChange

@@ -1,1 +1,1 @@
-"""GUI layer — customtkinter views."""
+"""Desktop GUI views built on customtkinter."""

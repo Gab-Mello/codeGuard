@@ -1,4 +1,4 @@
-"""File metadata — the smallest unit of information CodeGuard tracks per file."""
+"""Immutable description of a single tracked file at a point in time."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class FileMetadata:
-    """Immutable snapshot of a single file at a point in time.
+    """Identity and integrity information for one file in a Snapshot.
 
     Paths are stored as POSIX-style relative paths (relative to the monitored
     project root) so snapshots are portable across machines and OSes.

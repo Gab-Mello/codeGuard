@@ -1,7 +1,4 @@
-"""CodeGuard entry point.
-
-Stage 1: minimal launcher. The GUI is wired in a later stage.
-"""
+"""CodeGuard application entry point."""
 
 from __future__ import annotations
 
@@ -18,8 +15,7 @@ from codeguard import __version__
 
 
 def main() -> int:
-    print(f"CodeGuard v{__version__} — starting…")
-    print("(GUI not wired yet — coming in a later stage.)")
+    print(f"CodeGuard v{__version__}")
     return 0
 
 

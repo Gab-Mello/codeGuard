@@ -1,4 +1,4 @@
-"""Alert — a contextual notification produced by an AlertRule for a FileChange."""
+"""Severity-tagged notifications produced when sensitive files change."""
 
 from __future__ import annotations
 
@@ -32,8 +32,8 @@ _SEVERITY_RANK: dict[Severity, int] = {
 class Alert:
     """A contextual alert raised about a specific file change.
 
-    `rule_name` identifies which AlertRule produced the alert — useful for
-    persistence, the GUI, and debugging.
+    `rule_name` identifies which AlertRule produced the alert and is kept
+    around for persistence, the GUI, and debugging.
     """
 
     relative_path: str
