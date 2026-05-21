@@ -29,8 +29,8 @@ class AlertManager:
     def evaluate(self, changes: Iterable[FileChange]) -> list[Alert]:
         """Return all alerts produced by the registered rules for `changes`.
 
-        Output is sorted by severity (highest first), then by path so the
-        GUI renders the most urgent alerts at the top in a stable order.
+        Output is sorted by severity (highest first) and then by path, so
+        renderers display the most urgent alerts first in a stable order.
         """
         alerts: list[Alert] = []
         for change in changes:

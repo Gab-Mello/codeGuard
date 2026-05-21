@@ -8,9 +8,11 @@ In the current AI coding era, AI assistants, scripts, and automation tools frequ
 
 A CLI fits this job naturally: it lives next to the other developer tools you already use (`git`, `pytest`, `docker`, `kubectl`), it's scriptable, and it plugs into CI with exit codes and JSON output.
 
+CodeGuard is not a replacement for Git: Git tracks the changes you make on purpose, while CodeGuard watches the working tree against a trusted baseline and flags edits — committed or not — that you may not have meant to keep.
+
 ## Status
 
-Early development. The domain, scanning, diffing, and alert-rule layers are implemented; the persistence layer and CLI surface are next.
+Early development. The domain, scanning, diffing, alert-rule, and persistence layers are implemented; the CLI surface is next.
 
 ## Requirements
 
@@ -26,23 +28,22 @@ pip install -r requirements.txt
 ## Usage
 
 ```bash
-codeguard init    [PATH]                # snapshot a project as the trusted baseline
+codeguard init    [PATH] [--force]      # snapshot a project as the trusted baseline (--force re-baselines)
 codeguard scan    [PATH]                # scan against the baseline, raise alerts
 codeguard status  [PATH]                # show whether a baseline exists and when it was taken
 codeguard alerts  [PATH]                # list alerts from the latest (or a specific) scan
 codeguard history [PATH]                # list previous scans
 ```
 
-`PATH` defaults to the current directory. Common options:
+`PATH` defaults to the current directory. The per-project database lives at `<project>/.codeguard/codeguard.db`. Common options:
 
-- `--db-path PATH` — override the per-project SQLite database (default: `<project>/.codeguard/codeguard.db`).
 - `--json` — emit machine-readable output for scripting and CI.
 - `--fail-on-critical` — make `scan` exit with code `3` when CRITICAL alerts fire.
 - `--verbose` — raise log level to DEBUG.
 
 Exit codes: `0` success · `1` runtime error · `2` invalid usage · `3` critical alerts found (only with `--fail-on-critical`).
 
-Until the CLI entry point is wired up, `python main.py` only verifies the project layout.
+Until the CLI entry point is wired up, `python main.py` prints the package version as a layout check.
 
 ## License
 

@@ -28,9 +28,8 @@ Thumbs.db
 # Logs
 *.log
 
-# CodeGuard local database
-codeguard.db
-codeguard.db-journal
+# CodeGuard local state (database, journals, lock files)
+.codeguard/
 
 # Local development plan (kept out of git on purpose)
 IMPLEMENTATION_PLAN.md

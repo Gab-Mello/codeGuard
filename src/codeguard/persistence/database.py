@@ -93,6 +93,9 @@ class Database:
     Creates the parent directory and initializes the schema on first use.
     Connections are configured with `Row` row factory and foreign-key
     enforcement enabled so repositories can rely on referential integrity.
+
+    Initialization is lazy and not thread-safe: callers are assumed to be
+    single-threaded.
     """
 
     def __init__(self, path: Path | str) -> None:
