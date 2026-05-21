@@ -34,7 +34,6 @@ _SCHEMA_STATEMENTS: tuple[str, ...] = (
     """
     CREATE TABLE IF NOT EXISTS baselines (
         id                   INTEGER PRIMARY KEY AUTOINCREMENT,
-        project_root         TEXT    NOT NULL UNIQUE,
         baseline_snapshot_id INTEGER NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,
         created_at           TEXT    NOT NULL
     )
@@ -44,7 +43,6 @@ _SCHEMA_STATEMENTS: tuple[str, ...] = (
         id           INTEGER PRIMARY KEY AUTOINCREMENT,
         baseline_id  INTEGER NOT NULL REFERENCES baselines(id) ON DELETE CASCADE,
         snapshot_id  INTEGER NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,
-        project_root TEXT    NOT NULL,
         started_at   TEXT    NOT NULL,
         finished_at  TEXT    NOT NULL
     )

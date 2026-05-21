@@ -22,6 +22,7 @@ from collections.abc import Iterable
 class IgnoreMatcher:
     DEFAULT_PATTERNS: tuple[str, ...] = (
         ".git",
+        ".codeguard",
         "__pycache__",
         ".venv",
         "venv",

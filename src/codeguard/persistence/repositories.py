@@ -5,7 +5,6 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Iterable
 
 from ..domain import (
@@ -27,16 +26,11 @@ def _parse_iso(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 
-def _normalize_root(project_root: Path | str) -> str:
-    return str(Path(project_root).resolve())
-
-
 @dataclass(slots=True)
 class BaselineRecord:
     """Stored baseline plus its captured snapshot."""
 
     baseline_id: int
-    project_root: str
     created_at: datetime
     snapshot: Snapshot
 
@@ -47,7 +41,6 @@ class ScanRecord:
 
     scan_id: int
     baseline_id: int
-    project_root: str
     started_at: datetime
     finished_at: datetime
     change_count: int
@@ -123,20 +116,18 @@ class _SnapshotWriter:
 class BaselineRepository:
     """Persist and retrieve the trusted baseline of a project.
 
-    Each project root has at most one active baseline; saving a new one
+    Each database holds at most one active baseline; saving a new one
     replaces the previous baseline (and its snapshot) atomically.
     """
 
     def __init__(self, database: Database) -> None:
         self._db = database
 
-    def save(self, project_root: Path | str, snapshot: Snapshot) -> BaselineRecord:
-        normalized = _normalize_root(project_root)
+    def save(self, snapshot: Snapshot) -> BaselineRecord:
         created_at = _utcnow_iso()
         with self._db.connect() as conn:
             existing = conn.execute(
-                "SELECT id FROM baselines WHERE project_root = ?",
-                (normalized,),
+                "SELECT id FROM baselines LIMIT 1",
             ).fetchone()
             if existing is not None:
                 # Cascade clears the old snapshot, scans, changes, and alerts.
@@ -144,36 +135,32 @@ class BaselineRepository:
             snapshot_id = _SnapshotWriter.insert(conn, snapshot)
             cursor = conn.execute(
                 """
-                INSERT INTO baselines(project_root, baseline_snapshot_id, created_at)
-                VALUES (?, ?, ?)
+                INSERT INTO baselines(baseline_snapshot_id, created_at)
+                VALUES (?, ?)
                 """,
-                (normalized, snapshot_id, created_at),
+                (snapshot_id, created_at),
             )
             baseline_id = int(cursor.lastrowid)
         return BaselineRecord(
             baseline_id=baseline_id,
-            project_root=normalized,
             created_at=_parse_iso(created_at),
             snapshot=snapshot,
         )
 
-    def find(self, project_root: Path | str) -> BaselineRecord | None:
-        normalized = _normalize_root(project_root)
+    def find(self) -> BaselineRecord | None:
         with self._db.connect() as conn:
             row = conn.execute(
                 """
-                SELECT id, project_root, baseline_snapshot_id, created_at
+                SELECT id, baseline_snapshot_id, created_at
                   FROM baselines
-                 WHERE project_root = ?
+                 LIMIT 1
                 """,
-                (normalized,),
             ).fetchone()
             if row is None:
                 return None
             snapshot = _SnapshotWriter.load(conn, int(row["baseline_snapshot_id"]))
         return BaselineRecord(
             baseline_id=int(row["id"]),
-            project_root=row["project_root"],
             created_at=_parse_iso(row["created_at"]),
             snapshot=snapshot,
         )
@@ -189,14 +176,12 @@ class ScanHistoryRepository:
         self,
         *,
         baseline_id: int,
-        project_root: Path | str,
         snapshot: Snapshot,
         changes: Iterable[FileChange],
         alerts: Iterable[Alert],
         started_at: datetime,
         finished_at: datetime | None = None,
     ) -> ScanRecord:
-        normalized = _normalize_root(project_root)
         finished = finished_at or datetime.now(timezone.utc)
         change_list = list(changes)
         alert_list = list(alerts)
@@ -205,13 +190,12 @@ class ScanHistoryRepository:
             cursor = conn.execute(
                 """
                 INSERT INTO scans(
-                    baseline_id, snapshot_id, project_root, started_at, finished_at
-                ) VALUES (?, ?, ?, ?, ?)
+                    baseline_id, snapshot_id, started_at, finished_at
+                ) VALUES (?, ?, ?, ?)
                 """,
                 (
                     baseline_id,
                     snapshot_id,
-                    normalized,
                     started_at.isoformat(),
                     finished.isoformat(),
                 ),
@@ -223,7 +207,6 @@ class ScanHistoryRepository:
         return ScanRecord(
             scan_id=scan_id,
             baseline_id=baseline_id,
-            project_root=normalized,
             started_at=started_at,
             finished_at=finished,
             change_count=len(change_list),
@@ -231,17 +214,10 @@ class ScanHistoryRepository:
             critical_count=critical,
         )
 
-    def list_scans(
-        self,
-        project_root: Path | str,
-        *,
-        limit: int | None = None,
-    ) -> list[ScanRecord]:
-        normalized = _normalize_root(project_root)
+    def list_scans(self, *, limit: int | None = None) -> list[ScanRecord]:
         sql = """
             SELECT s.id            AS scan_id,
                    s.baseline_id   AS baseline_id,
-                   s.project_root  AS project_root,
                    s.started_at    AS started_at,
                    s.finished_at   AS finished_at,
                    (SELECT COUNT(*) FROM changes c WHERE c.scan_id = s.id)
@@ -252,10 +228,9 @@ class ScanHistoryRepository:
                      WHERE a.scan_id = s.id AND a.severity = ?)
                        AS critical_count
               FROM scans s
-             WHERE s.project_root = ?
              ORDER BY s.started_at DESC, s.id DESC
         """
-        params: tuple = (Severity.CRITICAL.value, normalized)
+        params: tuple = (Severity.CRITICAL.value,)
         if limit is not None:
             sql += " LIMIT ?"
             params = params + (int(limit),)
@@ -263,8 +238,8 @@ class ScanHistoryRepository:
             rows = conn.execute(sql, params).fetchall()
         return [self._row_to_scan(r) for r in rows]
 
-    def latest_scan(self, project_root: Path | str) -> ScanRecord | None:
-        results = self.list_scans(project_root, limit=1)
+    def latest_scan(self) -> ScanRecord | None:
+        results = self.list_scans(limit=1)
         return results[0] if results else None
 
     def alerts_for_scan(self, scan_id: int) -> list[Alert]:
@@ -350,7 +325,6 @@ class ScanHistoryRepository:
         return ScanRecord(
             scan_id=int(row["scan_id"]),
             baseline_id=int(row["baseline_id"]),
-            project_root=row["project_root"],
             started_at=_parse_iso(row["started_at"]),
             finished_at=_parse_iso(row["finished_at"]),
             change_count=int(row["change_count"]),
