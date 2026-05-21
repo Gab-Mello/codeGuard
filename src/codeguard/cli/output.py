@@ -22,15 +22,10 @@ from ..services import (
     ChangeType,
     FileChange,
     ScanOutcome,
+    ScanRecord,
     Severity,
 )
-
-
-_DB_RELATIVE_PATH = (".codeguard", "codeguard.db")
-
-
-def _database_path(project_root: str) -> Path:
-    return Path(project_root).joinpath(*_DB_RELATIVE_PATH)
+from .paths import database_path
 
 
 def _json_default(value: object) -> str:
@@ -51,7 +46,7 @@ def render_baseline_created(
     """Show the baseline summary on stdout in either Rich or JSON form."""
     record = outcome.record
     snapshot = record.snapshot
-    db_path = _database_path(snapshot.project_root)
+    db_path = database_path(snapshot.project_root)
 
     if json_output:
         _print_json(
@@ -303,4 +298,88 @@ def render_scan_no_baseline(*, json_output: bool) -> None:
             title_align="left",
             border_style="red",
         )
+    )
+
+
+def _scan_record_to_json(record: ScanRecord) -> dict:
+    duration_ms = int((record.finished_at - record.started_at).total_seconds() * 1000)
+    return {
+        "scan_id": record.scan_id,
+        "started_at": record.started_at,
+        "finished_at": record.finished_at,
+        "duration_ms": duration_ms,
+        "change_count": record.change_count,
+        "alert_count": record.alert_count,
+        "critical_count": record.critical_count,
+    }
+
+
+def render_status(
+    project_root: str,
+    baseline: BaselineRecord,
+    latest_scan: ScanRecord | None,
+    *,
+    json_output: bool,
+) -> None:
+    """Show whether a baseline exists, when, and how the latest scan went."""
+    db_path = database_path(project_root)
+
+    if json_output:
+        _print_json(
+            {
+                "ok": True,
+                "project_root": project_root,
+                "database_path": str(db_path),
+                "baseline": {
+                    "baseline_id": baseline.baseline_id,
+                    "created_at": baseline.created_at,
+                    "file_count": len(baseline.snapshot.files),
+                },
+                "latest_scan": (
+                    _scan_record_to_json(latest_scan) if latest_scan else None
+                ),
+                "clean": (
+                    None if latest_scan is None else latest_scan.change_count == 0
+                ),
+            }
+        )
+        return
+
+    if latest_scan is None:
+        title = "[blue]\u2139 Baseline ready (no scans yet)[/blue]"
+        border = "blue"
+    elif latest_scan.change_count == 0:
+        title = "[green]\u2713 Clean[/green]"
+        border = "green"
+    else:
+        title = "[yellow]\u26a0 Changes detected[/yellow]"
+        border = "yellow"
+
+    baseline_line = (
+        f"#{baseline.baseline_id} \u00b7 "
+        f"{baseline.created_at.isoformat(sep=' ')} \u00b7 "
+        f"{len(baseline.snapshot.files)} files"
+    )
+    if latest_scan is None:
+        scan_line = "no scans yet"
+    else:
+        duration_ms = int(
+            (latest_scan.finished_at - latest_scan.started_at).total_seconds() * 1000
+        )
+        scan_line = (
+            f"#{latest_scan.scan_id} \u00b7 "
+            f"{latest_scan.started_at.isoformat(sep=' ')} \u00b7 "
+            f"{latest_scan.change_count} changes \u00b7 "
+            f"{latest_scan.critical_count} critical \u00b7 "
+            f"{duration_ms} ms"
+        )
+
+    body = (
+        f"[bold]Project:[/bold]    {project_root}\n"
+        f"[bold]Database:[/bold]   {db_path}\n"
+        f"[bold]Baseline:[/bold]   {baseline_line}\n"
+        f"[bold]Last scan:[/bold]  {scan_line}"
+    )
+    Console().print(
+        Panel(body, title=title, title_align="left", border_style=border)
     )
