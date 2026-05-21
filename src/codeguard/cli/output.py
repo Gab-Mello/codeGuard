@@ -15,7 +15,15 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ..services import BaselineOutcome, BaselineRecord
+from ..services import (
+    Alert,
+    BaselineOutcome,
+    BaselineRecord,
+    ChangeType,
+    FileChange,
+    ScanOutcome,
+    Severity,
+)
 
 
 _DB_RELATIVE_PATH = (".codeguard", "codeguard.db")
@@ -112,6 +120,186 @@ def render_baseline_already_exists(
         Panel(
             body,
             title="[red]\u2717 Baseline already exists[/red]",
+            title_align="left",
+            border_style="red",
+        )
+    )
+
+
+_CHANGE_TYPE_ORDER: dict[ChangeType, int] = {
+    ChangeType.CREATED: 0,
+    ChangeType.MODIFIED: 1,
+    ChangeType.DELETED: 2,
+}
+
+_CHANGE_TYPE_STYLE: dict[ChangeType, str] = {
+    ChangeType.CREATED: "green",
+    ChangeType.MODIFIED: "yellow",
+    ChangeType.DELETED: "red",
+}
+
+_SEVERITY_STYLE: dict[Severity, str] = {
+    Severity.CRITICAL: "bold red",
+    Severity.HIGH: "yellow",
+    Severity.MEDIUM: "blue",
+    Severity.LOW: "dim cyan",
+}
+
+
+def _format_size(num_bytes: int) -> str:
+    if num_bytes < 1024:
+        return f"{num_bytes} B"
+    if num_bytes < 1024 * 1024:
+        return f"{num_bytes / 1024:.1f} KB"
+    if num_bytes < 1024 * 1024 * 1024:
+        return f"{num_bytes / (1024 * 1024):.1f} MB"
+    return f"{num_bytes / (1024 * 1024 * 1024):.1f} GB"
+
+
+def _change_size_cell(change: FileChange) -> str:
+    if change.change_type is ChangeType.CREATED:
+        return _format_size(change.after.size_bytes)  # type: ignore[union-attr]
+    if change.change_type is ChangeType.DELETED:
+        return _format_size(change.before.size_bytes)  # type: ignore[union-attr]
+    before = _format_size(change.before.size_bytes)  # type: ignore[union-attr]
+    after = _format_size(change.after.size_bytes)  # type: ignore[union-attr]
+    return f"{before} \u2192 {after}"
+
+
+def _change_to_json(change: FileChange) -> dict:
+    before = change.before
+    after = change.after
+    return {
+        "relative_path": change.relative_path,
+        "change_type": change.change_type.value,
+        "before_size": before.size_bytes if before else None,
+        "after_size": after.size_bytes if after else None,
+        "before_sha256": before.sha256 if before else None,
+        "after_sha256": after.sha256 if after else None,
+    }
+
+
+def _alert_to_json(alert: Alert) -> dict:
+    return {
+        "relative_path": alert.relative_path,
+        "change_type": alert.change_type.value,
+        "severity": alert.severity.value,
+        "rule_name": alert.rule_name,
+        "message": alert.message,
+    }
+
+
+def _sorted_changes(changes: list[FileChange]) -> list[FileChange]:
+    return sorted(
+        changes,
+        key=lambda c: (_CHANGE_TYPE_ORDER[c.change_type], c.relative_path),
+    )
+
+
+def _sorted_alerts(alerts: list[Alert]) -> list[Alert]:
+    return sorted(
+        alerts,
+        key=lambda a: (-a.severity.rank, a.relative_path),
+    )
+
+
+def render_scan_result(outcome: ScanOutcome, *, json_output: bool) -> None:
+    """Show the scan summary, changes, and alerts on stdout."""
+    record = outcome.record
+    duration_ms = int(
+        (record.finished_at - record.started_at).total_seconds() * 1000
+    )
+
+    if json_output:
+        _print_json(
+            {
+                "ok": True,
+                "scan_id": record.scan_id,
+                "baseline_id": record.baseline_id,
+                "started_at": record.started_at,
+                "finished_at": record.finished_at,
+                "duration_ms": duration_ms,
+                "change_count": record.change_count,
+                "alert_count": record.alert_count,
+                "critical_count": record.critical_count,
+                "changes": [_change_to_json(c) for c in outcome.changes],
+                "alerts": [_alert_to_json(a) for a in outcome.alerts],
+                "skipped": [list(item) for item in outcome.skipped],
+            }
+        )
+        return
+
+    console = Console()
+    critical_segment = (
+        f"[bold red]{record.critical_count} critical[/bold red]"
+        if record.critical_count > 0
+        else f"[dim]{record.critical_count} critical[/dim]"
+    )
+    console.print(
+        f"[bold]Scan #{record.scan_id}[/bold] \u00b7 "
+        f"{record.change_count} changes \u00b7 "
+        f"{record.alert_count} alerts \u00b7 "
+        f"{critical_segment} \u00b7 "
+        f"{duration_ms} ms"
+    )
+
+    if outcome.changes:
+        table = Table(title="Changes", title_justify="left")
+        table.add_column("Type", no_wrap=True)
+        table.add_column("Path", overflow="fold")
+        table.add_column("Size", justify="right", no_wrap=True)
+        for change in _sorted_changes(outcome.changes):
+            style = _CHANGE_TYPE_STYLE[change.change_type]
+            table.add_row(
+                f"[{style}]{change.change_type.value}[/{style}]",
+                change.relative_path,
+                _change_size_cell(change),
+            )
+        console.print(table)
+
+    if outcome.alerts:
+        table = Table(title="Alerts", title_justify="left")
+        table.add_column("Severity", no_wrap=True)
+        table.add_column("Path", overflow="fold")
+        table.add_column("Rule", no_wrap=True)
+        table.add_column("Message")
+        for alert in _sorted_alerts(outcome.alerts):
+            style = _SEVERITY_STYLE[alert.severity]
+            table.add_row(
+                f"[{style}]{alert.severity.value}[/{style}]",
+                alert.relative_path,
+                alert.rule_name,
+                alert.message,
+            )
+        console.print(table)
+
+    if outcome.skipped:
+        table = Table(title="Skipped files", title_justify="left")
+        table.add_column("Path", overflow="fold")
+        table.add_column("Reason")
+        for path, reason in outcome.skipped:
+            table.add_row(path, reason)
+        console.print(table)
+
+
+def render_scan_no_baseline(*, json_output: bool) -> None:
+    """Tell the user there is no baseline yet, in either Rich or JSON form."""
+    message = "no baseline; run `codeguard init` first"
+    if json_output:
+        _print_json(
+            {
+                "ok": False,
+                "error": "no_baseline",
+                "message": message,
+            }
+        )
+        return
+
+    console = Console()
+    console.print(
+        Panel(
+            "Run [bold]codeguard init[/bold] first to capture a baseline.",
+            title="[red]\u2717 No baseline[/red]",
             title_align="left",
             border_style="red",
         )
