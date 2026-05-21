@@ -43,7 +43,7 @@ codeguard history [PATH]                # list previous scans
 
 Exit codes: `0` success · `1` runtime error · `2` invalid usage · `3` critical alerts found (only with `--fail-on-critical`).
 
-Until the CLI entry point is wired up, `python main.py` prints the package version as a layout check.
+`python3 main.py <command>` runs CodeGuard from a clone without installing the package; once installed, the `codeguard` script is equivalent.
 
 ## License
 

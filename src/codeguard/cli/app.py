@@ -62,3 +62,6 @@ def _global_options(
 ) -> None:
     """Configure logging once per invocation, before any subcommand runs."""
     _configure_logging(verbose)
+
+
+from . import commands  # noqa: E402,F401  (import side-effect: registers commands)
