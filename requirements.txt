@@ -1,1 +1,2 @@
-customtkinter>=5.2.0
+typer>=0.12
+rich>=13.7

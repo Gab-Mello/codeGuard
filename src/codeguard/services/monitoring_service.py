@@ -10,9 +10,9 @@ from ..core.scanner import FileScanner, ScanResult
 class MonitoringService:
     """Coordinates scanning, baseline creation, change detection, and alerts.
 
-    The GUI talks only to this service; it never reaches into the scanner,
-    hasher, or repositories directly. Collaborators are constructor-injected
-    so they can be swapped or mocked.
+    Callers (the CLI, tests, future front-ends) talk only to this service;
+    they never reach into the scanner, hasher, or repositories directly.
+    Collaborators are constructor-injected so they can be swapped or mocked.
     """
 
     def __init__(self, scanner: FileScanner | None = None) -> None:

@@ -33,7 +33,7 @@ class Alert:
     """A contextual alert raised about a specific file change.
 
     `rule_name` identifies which AlertRule produced the alert and is kept
-    around for persistence, the GUI, and debugging.
+    around for persistence, presentation, and debugging.
     """
 
     relative_path: str
