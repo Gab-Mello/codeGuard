@@ -11,11 +11,11 @@ _SRC = Path(__file__).resolve().parent / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from codeguard import __version__
+from codeguard.cli.app import app
 
 
 def main() -> int:
-    print(f"CodeGuard v{__version__}")
+    app()
     return 0
 
 
