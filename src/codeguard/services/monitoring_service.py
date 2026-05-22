@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -18,6 +19,9 @@ from ..persistence import (
     ScanHistoryRepository,
     ScanRecord,
 )
+
+
+_logger = logging.getLogger(__name__)
 
 
 _DB_RELATIVE_PATH = (".codeguard", "codeguard.db")
@@ -134,6 +138,11 @@ class MonitoringService:
                 raise BaselineAlreadyExistsError(existing)
         scan = self._scanner.scan(root)
         record = baseline_repo.save(scan.snapshot)
+        _logger.info(
+            "baseline saved (id=%s, files=%d)",
+            record.baseline_id,
+            len(scan.snapshot.files),
+        )
         return BaselineOutcome(record=record, skipped=list(scan.skipped))
 
     def scan(self, project_root: Path | str) -> ScanOutcome:
@@ -158,6 +167,13 @@ class MonitoringService:
             changes=changes,
             alerts=alerts,
             started_at=started_at,
+        )
+        _logger.info(
+            "scan complete (id=%s, changes=%d, alerts=%d, critical=%d)",
+            record.scan_id,
+            record.change_count,
+            record.alert_count,
+            record.critical_count,
         )
         return ScanOutcome(
             record=record,

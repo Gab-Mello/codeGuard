@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
+
+
+_logger = logging.getLogger(__name__)
 
 
 _SCHEMA_STATEMENTS: tuple[str, ...] = (
@@ -115,6 +119,7 @@ class Database:
         finally:
             conn.close()
         self._initialized = True
+        _logger.info("database initialised at %s", self._path)
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:

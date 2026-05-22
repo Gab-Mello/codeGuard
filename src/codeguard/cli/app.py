@@ -27,7 +27,7 @@ app = typer.Typer(
 
 def _configure_logging(verbose: bool) -> None:
     logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.INFO,
+        level=logging.INFO if verbose else logging.WARNING,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
         stream=sys.stderr,
         force=True,
@@ -47,7 +47,7 @@ def _global_options(
         typer.Option(
             "--verbose",
             "-v",
-            help="Enable DEBUG-level logging on stderr.",
+            help="Enable INFO-level logging on stderr.",
         ),
     ] = False,
     version: Annotated[

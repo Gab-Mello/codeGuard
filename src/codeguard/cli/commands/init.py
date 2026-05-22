@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sqlite3
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -17,6 +18,7 @@ from ..app import (
     app,
 )
 from ..output import render_baseline_already_exists, render_baseline_created
+from ..paths import validate_project_path
 
 
 _logger = logging.getLogger(__name__)
@@ -46,19 +48,18 @@ def init(
     ] = False,
 ) -> None:
     """Snapshot the project's files and store them as the trusted baseline."""
-    if not path.exists():
-        print(f"error: path not found: {path}", file=sys.stderr)
-        raise typer.Exit(EXIT_INVALID_USAGE)
-    if not path.is_dir():
-        print(f"error: not a directory: {path}", file=sys.stderr)
-        raise typer.Exit(EXIT_INVALID_USAGE)
+    resolved = validate_project_path(path)
 
     service = MonitoringService()
     try:
-        outcome = service.create_baseline(path, force=force)
+        outcome = service.create_baseline(resolved, force=force)
     except BaselineAlreadyExistsError as exc:
         render_baseline_already_exists(exc.existing, json_output=json_output)
         raise typer.Exit(EXIT_INVALID_USAGE)
+    except sqlite3.OperationalError as exc:
+        _logger.exception("sqlite operational error")
+        print(f"error: database error: {exc}", file=sys.stderr)
+        raise typer.Exit(EXIT_RUNTIME_ERROR)
     except Exception as exc:
         _logger.exception("init failed")
         print(f"error: {exc}", file=sys.stderr)
@@ -66,3 +67,4 @@ def init(
 
     render_baseline_created(outcome, json_output=json_output)
     raise typer.Exit(EXIT_OK)
+

@@ -77,6 +77,9 @@ def render_baseline_created(
             border_style="green",
         )
     )
+    console.print(
+        "[dim]Next: run [bold]codeguard scan[/bold] to detect changes.[/dim]"
+    )
 
     if outcome.skipped:
         table = Table(title="Skipped files", title_justify="left")
