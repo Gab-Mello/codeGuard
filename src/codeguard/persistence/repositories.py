@@ -242,6 +242,29 @@ class ScanHistoryRepository:
         results = self.list_scans(limit=1)
         return results[0] if results else None
 
+    def get_scan(self, scan_id: int) -> ScanRecord | None:
+        sql = """
+            SELECT s.id            AS scan_id,
+                   s.baseline_id   AS baseline_id,
+                   s.started_at    AS started_at,
+                   s.finished_at   AS finished_at,
+                   (SELECT COUNT(*) FROM changes c WHERE c.scan_id = s.id)
+                       AS change_count,
+                   (SELECT COUNT(*) FROM alerts  a WHERE a.scan_id = s.id)
+                       AS alert_count,
+                   (SELECT COUNT(*) FROM alerts  a
+                     WHERE a.scan_id = s.id AND a.severity = ?)
+                       AS critical_count
+              FROM scans s
+             WHERE s.id = ?
+             LIMIT 1
+        """
+        with self._db.connect() as conn:
+            row = conn.execute(
+                sql, (Severity.CRITICAL.value, int(scan_id))
+            ).fetchone()
+        return self._row_to_scan(row) if row is not None else None
+
     def alerts_for_scan(self, scan_id: int) -> list[Alert]:
         with self._db.connect() as conn:
             rows = conn.execute(

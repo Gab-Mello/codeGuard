@@ -7,6 +7,7 @@ from .monitoring_service import (
     BaselineNotFoundError,
     BaselineOutcome,
     MonitoringService,
+    ScanNotFoundError,
     ScanOutcome,
 )
 
@@ -19,6 +20,7 @@ __all__ = [
     "ChangeType",
     "FileChange",
     "MonitoringService",
+    "ScanNotFoundError",
     "ScanOutcome",
     "ScanRecord",
     "Severity",

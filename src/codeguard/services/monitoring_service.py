@@ -45,6 +45,21 @@ class BaselineNotFoundError(Exception):
     """Raised when an operation requires a baseline that has not been created."""
 
 
+class ScanNotFoundError(Exception):
+    """Raised when an operation references a scan that does not exist.
+
+    `scan_id` is `None` when the caller asked for the latest scan and
+    no scans have been recorded yet, otherwise it carries the missing id.
+    """
+
+    def __init__(self, scan_id: int | None) -> None:
+        if scan_id is None:
+            super().__init__("no scans yet; run `codeguard scan` first")
+        else:
+            super().__init__(f"scan {scan_id} not found")
+        self.scan_id = scan_id
+
+
 @dataclass(slots=True, frozen=True)
 class BaselineOutcome:
     """Result of `create_baseline`: the persisted record plus any skipped paths."""
@@ -165,6 +180,30 @@ class MonitoringService:
         """Return persisted scans, newest first; empty list if no scans yet."""
         db, _ = self._open(project_root)
         return ScanHistoryRepository(db).list_scans(limit=limit)
+
+    def list_alerts(
+        self,
+        project_root: Path | str,
+        *,
+        scan_id: int | None = None,
+    ) -> tuple[ScanRecord, list[Alert]]:
+        """Return the alerts for a specific scan, or the latest scan by default.
+
+        Raises `ScanNotFoundError` when `scan_id` is given but no row matches,
+        or when `scan_id` is `None` and no scans exist yet.
+        """
+        db, _ = self._open(project_root)
+        history_repo = ScanHistoryRepository(db)
+        if scan_id is None:
+            record = history_repo.latest_scan()
+            if record is None:
+                raise ScanNotFoundError(None)
+        else:
+            record = history_repo.get_scan(scan_id)
+            if record is None:
+                raise ScanNotFoundError(scan_id)
+        alerts = history_repo.alerts_for_scan(record.scan_id)
+        return record, alerts
 
     def _open(self, project_root: Path | str) -> tuple[Database, Path]:
         root = Path(project_root).resolve()
