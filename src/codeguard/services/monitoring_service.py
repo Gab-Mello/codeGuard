@@ -105,18 +105,6 @@ class MonitoringService:
         self._alert_manager = alert_manager or AlertManager(default_rules())
         self._database_factory = database_factory or _default_database_factory
 
-    @property
-    def scanner(self) -> FileScanner:
-        return self._scanner
-
-    @property
-    def differ(self) -> SnapshotDiffer:
-        return self._differ
-
-    @property
-    def alert_manager(self) -> AlertManager:
-        return self._alert_manager
-
     def create_baseline(
         self,
         project_root: Path | str,

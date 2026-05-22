@@ -9,6 +9,8 @@ from .change import ChangeType
 
 
 class Severity(str, Enum):
+    """Ranked severity tag carried by every alert; used for sorting and CI gating."""
+
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
