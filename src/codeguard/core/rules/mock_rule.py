@@ -12,13 +12,19 @@ from .base import AlertRule
 class MockFileRule(AlertRule):
     """Fires on modifications to generated mock files.
 
-    Matches Go-style mock conventions (`mock_*.go`, `*_mock.go`) and any
-    file inside a `mocks/` directory. Generated mocks should normally be
-    regenerated from their source interface — a hand edit, or a stale
-    regeneration, is the kind of mistake worth surfacing.
+    Matches Go-style mock conventions (`mock_*.go`, `*_mock.go`), Python
+    test-mock conventions (`mock_*.py`, `*_mock.py`), and any file inside
+    a `mocks/` directory. Generated mocks should normally be regenerated
+    from their source interface — a hand edit, or a stale regeneration,
+    is the kind of mistake worth surfacing.
     """
 
-    _BASENAME_PATTERNS = ("mock_*.go", "*_mock.go")
+    _BASENAME_PATTERNS = (
+        "mock_*.go",
+        "*_mock.go",
+        "mock_*.py",
+        "*_mock.py",
+    )
     _MOCK_DIR_SEGMENT = "mocks"
 
     def evaluate(self, change: FileChange) -> Alert | None:

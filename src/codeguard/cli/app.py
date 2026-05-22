@@ -18,7 +18,11 @@ EXIT_CRITICAL_ALERTS = 3
 
 
 app = typer.Typer(
-    help="Snapshot a project's trusted state and detect unexpected changes.",
+    help=(
+        "Snapshot a project's trusted state and detect unexpected changes. "
+        "Run [bold]codeguard init <path>[/bold] to capture a baseline, then "
+        "[bold]codeguard scan <path>[/bold] to check for drift."
+    ),
     no_args_is_help=True,
     add_completion=False,
     rich_markup_mode="rich",

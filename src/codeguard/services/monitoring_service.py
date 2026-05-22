@@ -24,6 +24,7 @@ from ..persistence import (
 _logger = logging.getLogger(__name__)
 
 
+# Mirrored in cli/paths.py — keep both in sync.
 _DB_RELATIVE_PATH = (".codeguard", "codeguard.db")
 
 

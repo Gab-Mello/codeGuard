@@ -10,6 +10,7 @@ import typer
 from .app import EXIT_INVALID_USAGE
 
 
+# Mirrored in services/monitoring_service.py — keep both in sync.
 _DB_RELATIVE_PATH = (".codeguard", "codeguard.db")
 
 

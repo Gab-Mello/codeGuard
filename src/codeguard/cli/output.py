@@ -8,7 +8,7 @@ stdout too. Errors and logs are emitted on stderr by the command layer.
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from rich.console import Console
@@ -152,6 +152,31 @@ def _format_size(num_bytes: int) -> str:
     if num_bytes < 1024 * 1024 * 1024:
         return f"{num_bytes / (1024 * 1024):.1f} MB"
     return f"{num_bytes / (1024 * 1024 * 1024):.1f} GB"
+
+
+def _format_relative(when: datetime) -> str:
+    now = datetime.now(timezone.utc)
+    target = when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+    delta = now - target
+    seconds = int(delta.total_seconds())
+    if seconds < 0:
+        return "just now"
+    if seconds < 60:
+        return "just now"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+    days = hours // 24
+    if days < 30:
+        return f"{days} day{'s' if days != 1 else ''} ago"
+    months = days // 30
+    if months < 12:
+        return f"{months} month{'s' if months != 1 else ''} ago"
+    years = days // 365
+    return f"{years} year{'s' if years != 1 else ''} ago"
 
 
 def _change_size_cell(change: FileChange) -> str:
@@ -364,7 +389,8 @@ def render_status(
 
     baseline_line = (
         f"#{baseline.baseline_id} \u00b7 "
-        f"{baseline.created_at.isoformat(sep=' ')} \u00b7 "
+        f"{baseline.created_at.isoformat(sep=' ')} "
+        f"({_format_relative(baseline.created_at)}) \u00b7 "
         f"{len(baseline.snapshot.files)} files"
     )
     if latest_scan is None:
@@ -375,7 +401,8 @@ def render_status(
         )
         scan_line = (
             f"#{latest_scan.scan_id} \u00b7 "
-            f"{latest_scan.started_at.isoformat(sep=' ')} \u00b7 "
+            f"{latest_scan.started_at.isoformat(sep=' ')} "
+            f"({_format_relative(latest_scan.started_at)}) \u00b7 "
             f"{latest_scan.change_count} changes \u00b7 "
             f"{latest_scan.critical_count} critical \u00b7 "
             f"{duration_ms} ms"
@@ -413,9 +440,10 @@ def render_history(
         return
 
     console = Console()
-    console.print(
-        f"[bold]Scan history[/bold] \u00b7 {len(records)} scans"
-    )
+    header = f"[bold]Scan history[/bold] \u00b7 {len(records)} scans"
+    if limit is not None:
+        header += f" \u00b7 limit {limit}"
+    console.print(header)
     if not records:
         console.print("[dim](no scans yet)[/dim]")
         return

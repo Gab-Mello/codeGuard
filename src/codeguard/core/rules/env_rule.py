@@ -9,22 +9,24 @@ from .base import AlertRule
 
 
 class EnvFileRule(AlertRule):
-    """Fires on changes to `.env` (or `.env.<variant>`) files.
+    """Fires on any change to a `.env` (or `.env.<variant>`) file.
 
     `.env` files typically hold secrets and per-environment configuration,
-    so any modification or deletion is treated as CRITICAL — most likely
+    so any creation, modification, or deletion is treated as CRITICAL —
     a deliberate review is needed before accepting the change.
     """
 
-    _TRIGGER_TYPES = (ChangeType.MODIFIED, ChangeType.DELETED)
+    _VERBS: dict[ChangeType, str] = {
+        ChangeType.CREATED: "created",
+        ChangeType.MODIFIED: "modified",
+        ChangeType.DELETED: "deleted",
+    }
 
     def evaluate(self, change: FileChange) -> Alert | None:
-        if change.change_type not in self._TRIGGER_TYPES:
-            return None
         name = basename(change.relative_path)
         if not (name == ".env" or name.startswith(".env.")):
             return None
-        verb = "modified" if change.change_type is ChangeType.MODIFIED else "deleted"
+        verb = self._VERBS[change.change_type]
         return Alert(
             relative_path=change.relative_path,
             change_type=change.change_type,

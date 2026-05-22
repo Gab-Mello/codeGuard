@@ -155,11 +155,11 @@ Concrete rules:
 
 | Rule | Trigger | Severity |
 |------|---------|----------|
-| `EnvFileRule` | `MODIFIED` or `DELETED` on `.env` / `.env.*` | `CRITICAL` |
+| `EnvFileRule` | `CREATED`, `MODIFIED`, or `DELETED` on `.env` / `.env.*` | `CRITICAL` |
 | `DependencyFileRule` | `MODIFIED` on `requirements.txt`, `pyproject.toml`, `package.json`, `go.mod`, `go.sum` | `HIGH` |
 | `DockerFileRule` | `MODIFIED` on `Dockerfile`, `docker-compose.{yml,yaml}` | `HIGH` |
 | `MigrationRule` | `MODIFIED` or `DELETED` on any path inside `migrations/` (or `migration/`) | `HIGH` |
-| `MockFileRule` | `MODIFIED` on `mock_*.go` / `*_mock.go` / files inside `mocks/` | `MEDIUM` |
+| `MockFileRule` | `MODIFIED` on `mock_*.{go,py}` / `*_mock.{go,py}` / files inside `mocks/` | `MEDIUM` |
 
 `AlertManager.evaluate` walks every change against every rule and collects the non-`None` results — sorted by severity (descending) then path. Adding a sixth rule means writing one subclass; the manager never changes. That is the polymorphism win.
 
@@ -177,6 +177,8 @@ One SQLite database per project at `<project>/.codeguard/codeguard.db`. Schema (
 | `alerts` | Alerts produced during a scan. Indexed on `(scan_id, severity)`. |
 
 Every foreign key uses `ON DELETE CASCADE`. Deleting a baseline atomically drops its scans, their changes, and their alerts — that's how `init --force` re-baselines safely without leaking history rows.
+
+The schema is versioned via `PRAGMA user_version` (currently `1`). `Database.initialize()` stamps the version on a fresh database and refuses to open one written by an incompatible build, raising `SchemaVersionMismatchError`.
 
 The two repositories own the SQL: `BaselineRepository` (save / find) and `ScanHistoryRepository` (record_scan / list_scans / latest_scan / get_scan / alerts_for_scan). Connections come from `Database.connect()` as a context manager that auto-commits on success and rolls back on exception.
 
