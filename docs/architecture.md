@@ -4,7 +4,7 @@ This document covers the design of CodeGuard from a single point of view: how th
 
 ## 1. What CodeGuard is (and isn't)
 
-CodeGuard snapshots the bytes of a project (file size, modification time, SHA-256) into a trusted baseline, then diffs later snapshots against it and runs each diff edge through a small set of rules that emit alerts.
+CodeGuard snapshots the bytes of a project (file size, modification time, SHA-256) into a trusted baseline, then diffs later snapshots against it and runs each diff edge through a small set of rules that emit alerts. The CLI exposes six commands: `init`, `review` (the daily-use view), `scan` (its verbose / CI form), `status`, `alerts`, and `history`.
 
 It is **not**:
 
@@ -272,7 +272,7 @@ Every command also takes `--json`: success and expected-failure output go to std
 
 ## 10. Out of scope (intentional)
 
-- **No watch / daemon mode.** On-demand only.
+- **No watch / daemon mode.** On-demand only. A future `watch` (file-system event loop) and `dashboard` (TUI) are deliberately deferred — `review` covers the daily-use case without them.
 - **No user-configurable rule files.** Rules live in `core/rules/`; adding one is a Python class, not a YAML schema.
 - **No multi-project / global database.** One DB per project, isolated under `<project>/.codeguard/`.
 - **No file-content diff display.** That's `git diff`'s job; CodeGuard reports the *fact* of the change and its severity.
