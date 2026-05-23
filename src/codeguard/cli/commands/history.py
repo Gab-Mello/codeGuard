@@ -3,22 +3,15 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
-import sys
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from ...services import MonitoringService
-from ..app import (
-    EXIT_INVALID_USAGE,
-    EXIT_OK,
-    EXIT_RUNTIME_ERROR,
-    app,
-)
-from ..output import render_history, render_scan_no_baseline
-from ..paths import database_path, validate_project_path
+from ..app import EXIT_INVALID_USAGE, EXIT_OK, app
+from ..output import render_history
+from ..paths import handle_runtime_error, require_initialized, validate_project_path
 
 
 _logger = logging.getLogger(__name__)
@@ -51,23 +44,15 @@ def history(
 ) -> None:
     """List persisted scans newest-first, optionally capped with --limit."""
     resolved = validate_project_path(path)
-    if not database_path(resolved).exists():
-        render_scan_no_baseline(json_output=json_output)
-        raise typer.Exit(EXIT_INVALID_USAGE)
+    require_initialized(resolved, json_output=json_output)
 
     service = MonitoringService()
     try:
         records = service.list_history(resolved, limit=limit)
     except typer.Exit:
         raise
-    except sqlite3.OperationalError as exc:
-        _logger.exception("sqlite operational error")
-        print(f"error: database error: {exc}", file=sys.stderr)
-        raise typer.Exit(EXIT_RUNTIME_ERROR)
     except Exception as exc:
-        _logger.exception("history failed")
-        print(f"error: {exc}", file=sys.stderr)
-        raise typer.Exit(EXIT_RUNTIME_ERROR)
+        raise handle_runtime_error(exc, logger=_logger, context="history")
 
     render_history(
         str(resolved),

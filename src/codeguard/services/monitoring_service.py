@@ -24,12 +24,11 @@ from ..persistence import (
 _logger = logging.getLogger(__name__)
 
 
-# Mirrored in cli/paths.py — keep both in sync.
-_DB_RELATIVE_PATH = (".codeguard", "codeguard.db")
+DB_RELATIVE_PATH: tuple[str, ...] = (".codeguard", "codeguard.db")
 
 
 def _default_database_factory(project_root: Path) -> Database:
-    return Database(project_root.joinpath(*_DB_RELATIVE_PATH))
+    return Database(project_root.joinpath(*DB_RELATIVE_PATH))
 
 
 class BaselineAlreadyExistsError(Exception):

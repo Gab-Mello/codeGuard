@@ -3,6 +3,7 @@
 from ..domain import Alert, ChangeType, FileChange, Severity
 from ..persistence import BaselineRecord, ScanRecord
 from .monitoring_service import (
+    DB_RELATIVE_PATH,
     BaselineAlreadyExistsError,
     BaselineNotFoundError,
     BaselineOutcome,
@@ -18,6 +19,7 @@ __all__ = [
     "BaselineOutcome",
     "BaselineRecord",
     "ChangeType",
+    "DB_RELATIVE_PATH",
     "FileChange",
     "MonitoringService",
     "ScanNotFoundError",

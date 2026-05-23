@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
-import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -15,11 +13,10 @@ from ..app import (
     EXIT_CRITICAL_ALERTS,
     EXIT_INVALID_USAGE,
     EXIT_OK,
-    EXIT_RUNTIME_ERROR,
     app,
 )
 from ..output import render_review_summary, render_scan_no_baseline
-from ..paths import database_path, validate_project_path
+from ..paths import handle_runtime_error, require_initialized, validate_project_path
 
 
 _logger = logging.getLogger(__name__)
@@ -58,9 +55,7 @@ def review(
 ) -> None:
     """Run a scan and surface the items most worth a human's attention right now."""
     resolved = validate_project_path(path)
-    if not database_path(resolved).exists():
-        render_scan_no_baseline(json_output=json_output)
-        raise typer.Exit(EXIT_INVALID_USAGE)
+    require_initialized(resolved, json_output=json_output)
 
     service = MonitoringService()
     try:
@@ -68,14 +63,8 @@ def review(
     except BaselineNotFoundError:
         render_scan_no_baseline(json_output=json_output)
         raise typer.Exit(EXIT_INVALID_USAGE)
-    except sqlite3.OperationalError as exc:
-        _logger.exception("sqlite operational error")
-        print(f"error: database error: {exc}", file=sys.stderr)
-        raise typer.Exit(EXIT_RUNTIME_ERROR)
     except Exception as exc:
-        _logger.exception("review failed")
-        print(f"error: {exc}", file=sys.stderr)
-        raise typer.Exit(EXIT_RUNTIME_ERROR)
+        raise handle_runtime_error(exc, logger=_logger, context="review")
 
     render_review_summary(outcome, top=top, json_output=json_output)
     if fail_on_critical and outcome.record.critical_count > 0:
