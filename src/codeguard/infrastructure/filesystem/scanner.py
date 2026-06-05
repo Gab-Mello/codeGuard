@@ -6,9 +6,9 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..domain import FileMetadata, Snapshot
-from ..infrastructure.filesystem.hashing import FileHasher
-from ..infrastructure.filesystem.ignore import IgnoreMatcher
+from ...domain import FileMetadata, Snapshot
+from .hashing import FileHasher
+from .ignore import IgnoreMatcher
 
 
 @dataclass(slots=True)
