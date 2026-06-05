@@ -8,7 +8,7 @@ from pathlib import Path
 
 from ..domain import FileMetadata, Snapshot
 from ..infrastructure.filesystem.hashing import FileHasher
-from .ignore import IgnoreMatcher
+from ..infrastructure.filesystem.ignore import IgnoreMatcher
 
 
 @dataclass(slots=True)
