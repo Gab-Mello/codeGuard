@@ -1,7 +1,7 @@
 """Application services that orchestrate the monitoring workflow."""
 
 from ..domain import Alert, ChangeType, FileChange, Severity
-from ..infrastructure.persistence import BaselineRecord, ScanRecord
+from .dto import BaselineRecord, ScanRecord
 from .monitoring_service import (
     DB_RELATIVE_PATH,
     BaselineAlreadyExistsError,

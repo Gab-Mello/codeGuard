@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Iterable
 
+from ...application.dto import BaselineRecord, ScanRecord
 from ...domain import (
     Alert,
     ChangeType,
@@ -24,28 +24,6 @@ def _utcnow_iso() -> str:
 
 def _parse_iso(value: str) -> datetime:
     return datetime.fromisoformat(value)
-
-
-@dataclass(slots=True)
-class BaselineRecord:
-    """Stored baseline plus its captured snapshot."""
-
-    baseline_id: int
-    created_at: datetime
-    snapshot: Snapshot
-
-
-@dataclass(slots=True)
-class ScanRecord:
-    """Summary row for one persisted scan."""
-
-    scan_id: int
-    baseline_id: int
-    started_at: datetime
-    finished_at: datetime
-    change_count: int
-    alert_count: int
-    critical_count: int
 
 
 class _SnapshotWriter:
