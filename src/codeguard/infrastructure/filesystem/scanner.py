@@ -3,21 +3,12 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
 from pathlib import Path
 
+from ...application.dto import ScanResult
 from ...domain import FileMetadata, Snapshot
 from .hashing import FileHasher
 from .ignore import IgnoreMatcher
-
-
-@dataclass(slots=True)
-class ScanResult:
-    """Outcome of a scan: the snapshot plus any files that could not be read."""
-
-    snapshot: Snapshot
-    skipped: list[tuple[str, str]] = field(default_factory=list)
-    """Pairs of (relative_posix_path, reason) for files that were skipped."""
 
 
 class FileScanner:

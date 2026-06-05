@@ -3,33 +3,25 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
 from ..domain.differ import SnapshotDiffer
 from ..domain.rules import AlertManager, default_rules
-from ..infrastructure.filesystem import FileScanner
 from ..domain import Alert, FileChange
-from ..infrastructure.persistence import (
-    BaselineRecord,
-    BaselineRepository,
-    Database,
-    ScanHistoryRepository,
-    ScanRecord,
+from .dto import BaselineRecord, ScanRecord
+from .ports import (
+    BaselineRepositoryProtocol,
+    FileScannerProtocol,
+    ScanHistoryRepositoryProtocol,
 )
-from .ports import BaselineRepositoryProtocol, ScanHistoryRepositoryProtocol
 
 
 _logger = logging.getLogger(__name__)
 
 
 DB_RELATIVE_PATH: tuple[str, ...] = (".codeguard", "codeguard.db")
-
-
-def _default_database_factory(project_root: Path) -> Database:
-    return Database(project_root.joinpath(*DB_RELATIVE_PATH))
 
 
 class BaselineAlreadyExistsError(Exception):
@@ -87,28 +79,26 @@ class MonitoringService:
     """Single facade the CLI talks to.
 
     Wires the scanner, differ, alert manager, and repositories together so
-    callers never reach into them directly. Each method takes a project
-    path, resolves it, and opens the corresponding `<project>/.codeguard/
-    codeguard.db` SQLite file. Collaborators are constructor-injected so
-    they can be replaced or mocked in tests.
+    callers never reach into them directly. Collaborators are constructor-
+    injected: the application layer depends on protocols, and concrete
+    infrastructure adapters are provided by the entry point (the CLI's
+    composition root).
     """
 
     def __init__(
         self,
         *,
-        scanner: FileScanner | None = None,
+        baseline_repo: BaselineRepositoryProtocol,
+        scan_history_repo: ScanHistoryRepositoryProtocol,
+        scanner: FileScannerProtocol,
         differ: SnapshotDiffer | None = None,
         alert_manager: AlertManager | None = None,
-        baseline_repo: BaselineRepositoryProtocol | None = None,
-        scan_history_repo: ScanHistoryRepositoryProtocol | None = None,
-        database_factory: Callable[[Path], Database] | None = None,
     ) -> None:
-        self._scanner = scanner or FileScanner()
-        self._differ = differ or SnapshotDiffer()
-        self._alert_manager = alert_manager or AlertManager(default_rules())
         self._baseline_repo = baseline_repo
         self._scan_history_repo = scan_history_repo
-        self._database_factory = database_factory or _default_database_factory
+        self._scanner = scanner
+        self._differ = differ or SnapshotDiffer()
+        self._alert_manager = alert_manager or AlertManager(default_rules())
 
     def create_baseline(
         self,
@@ -124,7 +114,7 @@ class MonitoringService:
         are cascaded away atomically before the new one is saved.
         """
         root = self._resolve(project_root)
-        baseline_repo = self._baseline(root)
+        baseline_repo = self._baseline_repo
         if not force:
             existing = baseline_repo.find()
             if existing is not None:
@@ -144,7 +134,7 @@ class MonitoringService:
         Raises `BaselineNotFoundError` if no baseline has been created yet.
         """
         root = self._resolve(project_root)
-        baseline_repo = self._baseline(root)
+        baseline_repo = self._baseline_repo
         baseline = baseline_repo.find()
         if baseline is None:
             raise BaselineNotFoundError("no baseline; run `codeguard init` first")
@@ -153,7 +143,7 @@ class MonitoringService:
         scan = self._scanner.scan(root)
         changes = self._differ.diff(baseline.snapshot, scan.snapshot)
         alerts = self._alert_manager.evaluate(changes)
-        history_repo = self._scan_history(root)
+        history_repo = self._scan_history_repo
         record = history_repo.record_scan(
             baseline_id=baseline.baseline_id,
             snapshot=scan.snapshot,
@@ -176,9 +166,12 @@ class MonitoringService:
         )
 
     def latest_baseline(self, project_root: Path | str) -> BaselineRecord | None:
-        """Return the active baseline for `project_root`, or `None` if absent."""
-        root = self._resolve(project_root)
-        return self._baseline(root).find()
+        """Return the active baseline for `project_root`, or `None` if absent.
+
+        `project_root` is accepted for API symmetry; the repository was
+        already bound to the right database when it was injected.
+        """
+        return self._baseline_repo.find()
 
     def list_history(
         self,
@@ -187,8 +180,7 @@ class MonitoringService:
         limit: int | None = None,
     ) -> list[ScanRecord]:
         """Return persisted scans, newest first; empty list if no scans yet."""
-        root = self._resolve(project_root)
-        return self._scan_history(root).list_scans(limit=limit)
+        return self._scan_history_repo.list_scans(limit=limit)
 
     def list_alerts(
         self,
@@ -201,8 +193,7 @@ class MonitoringService:
         Raises `ScanNotFoundError` when `scan_id` is given but no row matches,
         or when `scan_id` is `None` and no scans exist yet.
         """
-        root = self._resolve(project_root)
-        history_repo = self._scan_history(root)
+        history_repo = self._scan_history_repo
         if scan_id is None:
             record = history_repo.latest_scan()
             if record is None:
@@ -214,20 +205,6 @@ class MonitoringService:
         alerts = history_repo.alerts_for_scan(record.scan_id)
         return record, alerts
 
-    def _open(self, project_root: Path | str) -> tuple[Database, Path]:
-        root = Path(project_root).resolve()
-        return self._database_factory(root), root
-
     @staticmethod
     def _resolve(project_root: Path | str) -> Path:
         return Path(project_root).resolve()
-
-    def _baseline(self, root: Path) -> BaselineRepositoryProtocol:
-        if self._baseline_repo is not None:
-            return self._baseline_repo
-        return BaselineRepository(self._database_factory(root))
-
-    def _scan_history(self, root: Path) -> ScanHistoryRepositoryProtocol:
-        if self._scan_history_repo is not None:
-            return self._scan_history_repo
-        return ScanHistoryRepository(self._database_factory(root))

@@ -8,7 +8,7 @@ talk about its own results.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 from ..domain import Snapshot
@@ -34,3 +34,12 @@ class ScanRecord:
     change_count: int
     alert_count: int
     critical_count: int
+
+
+@dataclass(slots=True)
+class ScanResult:
+    """Outcome of a filesystem scan: the snapshot plus any files that were skipped."""
+
+    snapshot: Snapshot
+    skipped: list[tuple[str, str]] = field(default_factory=list)
+    """Pairs of (relative_posix_path, reason) for files that were skipped."""

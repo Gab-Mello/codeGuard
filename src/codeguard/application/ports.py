@@ -10,10 +10,11 @@ in-memory fakes the same way.
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 from typing import Iterable, Protocol
 
 from ..domain import Alert, FileChange, Snapshot
-from .dto import BaselineRecord, ScanRecord
+from .dto import BaselineRecord, ScanRecord, ScanResult
 
 
 class BaselineRepositoryProtocol(Protocol):
@@ -45,3 +46,9 @@ class ScanHistoryRepositoryProtocol(Protocol):
     def get_scan(self, scan_id: int) -> ScanRecord | None: ...
 
     def alerts_for_scan(self, scan_id: int) -> list[Alert]: ...
+
+
+class FileScannerProtocol(Protocol):
+    """Walk a project directory and produce a snapshot of its files."""
+
+    def scan(self, project_root: Path | str) -> ScanResult: ...
