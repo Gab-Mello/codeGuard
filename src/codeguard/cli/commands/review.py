@@ -8,7 +8,7 @@ from typing import Annotated
 
 import typer
 
-from ...services import BaselineNotFoundError
+from ...application import BaselineNotFoundError
 from ..app import (
     EXIT_CRITICAL_ALERTS,
     EXIT_INVALID_USAGE,

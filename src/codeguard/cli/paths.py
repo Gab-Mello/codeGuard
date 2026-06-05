@@ -9,7 +9,7 @@ from pathlib import Path
 
 import typer
 
-from ..services import DB_RELATIVE_PATH
+from ..application import DB_RELATIVE_PATH
 from .app import EXIT_INVALID_USAGE, EXIT_RUNTIME_ERROR
 
 

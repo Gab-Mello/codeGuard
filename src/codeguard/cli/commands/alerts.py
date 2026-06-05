@@ -8,7 +8,7 @@ from typing import Annotated
 
 import typer
 
-from ...services import ScanNotFoundError, Severity
+from ...application import ScanNotFoundError, Severity
 from ..app import EXIT_INVALID_USAGE, EXIT_OK, app
 from ..output import render_alerts_view, render_scan_not_found
 from ..paths import handle_runtime_error, require_initialized, validate_project_path

@@ -8,7 +8,7 @@ from typing import Annotated
 
 import typer
 
-from ...services import BaselineAlreadyExistsError
+from ...application import BaselineAlreadyExistsError
 from ..app import EXIT_INVALID_USAGE, EXIT_OK, app
 from ..output import render_baseline_already_exists, render_baseline_created
 from ..paths import handle_runtime_error, validate_project_path
