@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from ..domain.differ import SnapshotDiffer
-from ..core.rules import AlertManager, default_rules
+from ..domain.rules import AlertManager, default_rules
 from ..infrastructure.filesystem import FileScanner
 from ..domain import Alert, FileChange
 from ..infrastructure.persistence import (

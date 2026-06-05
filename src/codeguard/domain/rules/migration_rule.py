@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from ...domain import Alert, ChangeType, FileChange, Severity
+from ..alert import Alert, Severity
+from ..change import ChangeType, FileChange
 from .base import AlertRule
 
 

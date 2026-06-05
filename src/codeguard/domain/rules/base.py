@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from ...domain import Alert, FileChange
+from ..alert import Alert
+from ..change import FileChange
 
 
 class AlertRule(ABC):
