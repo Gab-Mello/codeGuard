@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Iterable
 
-from ..domain import (
+from ...domain import (
     Alert,
     ChangeType,
     FileChange,

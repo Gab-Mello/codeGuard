@@ -12,7 +12,7 @@ from ..core.differ import SnapshotDiffer
 from ..core.rules import AlertManager, default_rules
 from ..core.scanner import FileScanner
 from ..domain import Alert, FileChange
-from ..persistence import (
+from ..infrastructure.persistence import (
     BaselineRecord,
     BaselineRepository,
     Database,

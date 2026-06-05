@@ -1,17 +1,7 @@
-"""SQLite-backed storage for baselines, changes, and alert history."""
+"""Compatibility shim. The persistence package moved to infrastructure.persistence.
 
-from .database import Database
-from .repositories import (
-    BaselineRecord,
-    BaselineRepository,
-    ScanHistoryRepository,
-    ScanRecord,
-)
+This shim is removed in a later commit once all imports have been migrated.
+"""
 
-__all__ = [
-    "BaselineRecord",
-    "BaselineRepository",
-    "Database",
-    "ScanHistoryRepository",
-    "ScanRecord",
-]
+from ..infrastructure.persistence import *  # noqa: F401,F403
+from ..infrastructure.persistence import __all__  # noqa: F401
