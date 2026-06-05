@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..core.differ import SnapshotDiffer
+from ..domain.differ import SnapshotDiffer
 from ..core.rules import AlertManager, default_rules
 from ..infrastructure.filesystem import FileScanner
 from ..domain import Alert, FileChange

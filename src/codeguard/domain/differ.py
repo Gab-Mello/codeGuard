@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from ..domain import ChangeType, FileChange, Snapshot
+from .change import ChangeType, FileChange
+from .snapshot import Snapshot
 
 
 class SnapshotDiffer:
