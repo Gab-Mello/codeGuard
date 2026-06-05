@@ -1,29 +1,7 @@
-"""Application services that orchestrate the monitoring workflow."""
+"""Compatibility shim. The services package was renamed to application.
 
-from ..domain import Alert, ChangeType, FileChange, Severity
-from ..persistence import BaselineRecord, ScanRecord
-from .monitoring_service import (
-    DB_RELATIVE_PATH,
-    BaselineAlreadyExistsError,
-    BaselineNotFoundError,
-    BaselineOutcome,
-    MonitoringService,
-    ScanNotFoundError,
-    ScanOutcome,
-)
+This shim is removed in a later commit once all imports have been migrated.
+"""
 
-__all__ = [
-    "Alert",
-    "BaselineAlreadyExistsError",
-    "BaselineNotFoundError",
-    "BaselineOutcome",
-    "BaselineRecord",
-    "ChangeType",
-    "DB_RELATIVE_PATH",
-    "FileChange",
-    "MonitoringService",
-    "ScanNotFoundError",
-    "ScanOutcome",
-    "ScanRecord",
-    "Severity",
-]
+from ..application import *  # noqa: F401,F403
+from ..application import __all__  # noqa: F401
