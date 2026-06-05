@@ -8,10 +8,10 @@ from typing import Annotated
 
 import typer
 
-from ...services import MonitoringService
 from ..app import EXIT_INVALID_USAGE, EXIT_OK, app
 from ..output import render_scan_no_baseline, render_status
 from ..paths import handle_runtime_error, require_initialized, validate_project_path
+from ..wiring import build_monitoring_service
 
 
 _logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ def status(
     resolved = validate_project_path(path)
     require_initialized(resolved, json_output=json_output)
 
-    service = MonitoringService()
+    service = build_monitoring_service(resolved)
     try:
         baseline = service.latest_baseline(resolved)
         if baseline is None:

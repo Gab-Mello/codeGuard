@@ -8,10 +8,10 @@ from typing import Annotated
 
 import typer
 
-from ...services import MonitoringService
 from ..app import EXIT_INVALID_USAGE, EXIT_OK, app
 from ..output import render_history
 from ..paths import handle_runtime_error, require_initialized, validate_project_path
+from ..wiring import build_monitoring_service
 
 
 _logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def history(
     resolved = validate_project_path(path)
     require_initialized(resolved, json_output=json_output)
 
-    service = MonitoringService()
+    service = build_monitoring_service(resolved)
     try:
         records = service.list_history(resolved, limit=limit)
     except typer.Exit:

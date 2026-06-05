@@ -8,10 +8,11 @@ from typing import Annotated
 
 import typer
 
-from ...services import BaselineAlreadyExistsError, MonitoringService
+from ...services import BaselineAlreadyExistsError
 from ..app import EXIT_INVALID_USAGE, EXIT_OK, app
 from ..output import render_baseline_already_exists, render_baseline_created
 from ..paths import handle_runtime_error, validate_project_path
+from ..wiring import build_monitoring_service
 
 
 _logger = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ def init(
     """Snapshot the project's files and store them as the trusted baseline."""
     resolved = validate_project_path(path)
 
-    service = MonitoringService()
+    service = build_monitoring_service(resolved)
     try:
         outcome = service.create_baseline(resolved, force=force)
     except BaselineAlreadyExistsError as exc:

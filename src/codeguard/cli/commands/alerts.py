@@ -8,10 +8,11 @@ from typing import Annotated
 
 import typer
 
-from ...services import MonitoringService, ScanNotFoundError, Severity
+from ...services import ScanNotFoundError, Severity
 from ..app import EXIT_INVALID_USAGE, EXIT_OK, app
 from ..output import render_alerts_view, render_scan_not_found
 from ..paths import handle_runtime_error, require_initialized, validate_project_path
+from ..wiring import build_monitoring_service
 
 
 _logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ def alerts(
     resolved = validate_project_path(path)
     require_initialized(resolved, json_output=json_output)
 
-    service = MonitoringService()
+    service = build_monitoring_service(resolved)
     try:
         record, scan_alerts = service.list_alerts(resolved, scan_id=scan_id)
     except ScanNotFoundError as exc:
