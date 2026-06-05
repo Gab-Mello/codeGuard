@@ -19,6 +19,7 @@ from ..infrastructure.persistence import (
     ScanHistoryRepository,
     ScanRecord,
 )
+from .ports import BaselineRepositoryProtocol, ScanHistoryRepositoryProtocol
 
 
 _logger = logging.getLogger(__name__)
@@ -98,11 +99,15 @@ class MonitoringService:
         scanner: FileScanner | None = None,
         differ: SnapshotDiffer | None = None,
         alert_manager: AlertManager | None = None,
+        baseline_repo: BaselineRepositoryProtocol | None = None,
+        scan_history_repo: ScanHistoryRepositoryProtocol | None = None,
         database_factory: Callable[[Path], Database] | None = None,
     ) -> None:
         self._scanner = scanner or FileScanner()
         self._differ = differ or SnapshotDiffer()
         self._alert_manager = alert_manager or AlertManager(default_rules())
+        self._baseline_repo = baseline_repo
+        self._scan_history_repo = scan_history_repo
         self._database_factory = database_factory or _default_database_factory
 
     def create_baseline(
@@ -118,8 +123,8 @@ class MonitoringService:
         `force=True` the previous baseline (and its scans, changes, alerts)
         are cascaded away atomically before the new one is saved.
         """
-        db, root = self._open(project_root)
-        baseline_repo = BaselineRepository(db)
+        root = self._resolve(project_root)
+        baseline_repo = self._baseline(root)
         if not force:
             existing = baseline_repo.find()
             if existing is not None:
@@ -138,8 +143,8 @@ class MonitoringService:
 
         Raises `BaselineNotFoundError` if no baseline has been created yet.
         """
-        db, root = self._open(project_root)
-        baseline_repo = BaselineRepository(db)
+        root = self._resolve(project_root)
+        baseline_repo = self._baseline(root)
         baseline = baseline_repo.find()
         if baseline is None:
             raise BaselineNotFoundError("no baseline; run `codeguard init` first")
@@ -148,7 +153,7 @@ class MonitoringService:
         scan = self._scanner.scan(root)
         changes = self._differ.diff(baseline.snapshot, scan.snapshot)
         alerts = self._alert_manager.evaluate(changes)
-        history_repo = ScanHistoryRepository(db)
+        history_repo = self._scan_history(root)
         record = history_repo.record_scan(
             baseline_id=baseline.baseline_id,
             snapshot=scan.snapshot,
@@ -172,8 +177,8 @@ class MonitoringService:
 
     def latest_baseline(self, project_root: Path | str) -> BaselineRecord | None:
         """Return the active baseline for `project_root`, or `None` if absent."""
-        db, _ = self._open(project_root)
-        return BaselineRepository(db).find()
+        root = self._resolve(project_root)
+        return self._baseline(root).find()
 
     def list_history(
         self,
@@ -182,8 +187,8 @@ class MonitoringService:
         limit: int | None = None,
     ) -> list[ScanRecord]:
         """Return persisted scans, newest first; empty list if no scans yet."""
-        db, _ = self._open(project_root)
-        return ScanHistoryRepository(db).list_scans(limit=limit)
+        root = self._resolve(project_root)
+        return self._scan_history(root).list_scans(limit=limit)
 
     def list_alerts(
         self,
@@ -196,8 +201,8 @@ class MonitoringService:
         Raises `ScanNotFoundError` when `scan_id` is given but no row matches,
         or when `scan_id` is `None` and no scans exist yet.
         """
-        db, _ = self._open(project_root)
-        history_repo = ScanHistoryRepository(db)
+        root = self._resolve(project_root)
+        history_repo = self._scan_history(root)
         if scan_id is None:
             record = history_repo.latest_scan()
             if record is None:
@@ -212,3 +217,17 @@ class MonitoringService:
     def _open(self, project_root: Path | str) -> tuple[Database, Path]:
         root = Path(project_root).resolve()
         return self._database_factory(root), root
+
+    @staticmethod
+    def _resolve(project_root: Path | str) -> Path:
+        return Path(project_root).resolve()
+
+    def _baseline(self, root: Path) -> BaselineRepositoryProtocol:
+        if self._baseline_repo is not None:
+            return self._baseline_repo
+        return BaselineRepository(self._database_factory(root))
+
+    def _scan_history(self, root: Path) -> ScanHistoryRepositoryProtocol:
+        if self._scan_history_repo is not None:
+            return self._scan_history_repo
+        return ScanHistoryRepository(self._database_factory(root))
