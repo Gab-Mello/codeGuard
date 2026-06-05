@@ -16,31 +16,53 @@ Think of CodeGuard as a second, file-content–level trust anchor independent of
 
 ## 2. Layered architecture
 
+CodeGuard follows Clean Architecture: dependencies flow inward only, and the
+application layer depends on abstractions, never on concrete infrastructure.
+
 ```mermaid
 flowchart LR
-    cli[cli/] --> services[services/]
-    services --> core[core/]
-    services --> persistence[persistence/]
-    core --> domain[domain/]
-    persistence --> domain
-    services --> domain
+    cli[cli/<br/>composition root]
+    app[application/<br/>MonitoringService + Protocols]
+    infra[infrastructure/<br/>filesystem + persistence]
+    dom[domain/<br/>entities, differ, rules]
+    cli --> app
+    cli --> infra
+    app --> dom
+    infra --> dom
 ```
 
-Five layers, with strict inward-only dependencies:
+Four layers, with strict inward-only dependencies:
 
 | Layer | Owns | Forbidden imports |
 |-------|------|-------------------|
-| `domain/` | Pure data types: `Snapshot`, `FileMetadata`, `FileChange`, `ChangeType`, `Alert`, `Severity`. | Everything I/O. |
-| `core/` | Scanner, hasher, ignore matcher, differ, alert rules + manager. | `persistence`, `cli`. |
-| `persistence/` | SQLite `Database`, `BaselineRepository`, `ScanHistoryRepository`. | `cli`, `services`. |
-| `services/` | `MonitoringService` facade + result types + service exceptions. | `cli`. |
-| `cli/` | Typer app, commands, renderers. | `domain`, `core`, `persistence` — **only** `services` and CLI siblings. |
+| `domain/` | Entities (`Snapshot`, `FileMetadata`, `FileChange`, `Alert`, `Severity`), `SnapshotDiffer`, the `AlertRule` hierarchy + `AlertManager`. All pure: no I/O, no SQL. | Everything outward. |
+| `application/` | `MonitoringService` (the use-case facade), DTOs (`BaselineRecord`, `ScanRecord`, `ScanResult`), and Protocols (`BaselineRepositoryProtocol`, `ScanHistoryRepositoryProtocol`, `FileScannerProtocol`). | `infrastructure`, `cli`. |
+| `infrastructure/` | I/O adapters: `infrastructure/filesystem/` (scanner, hasher, ignore matcher) and `infrastructure/persistence/` (SQLite `Database`, repositories). Each adapter satisfies an application Protocol structurally. | `application`, `cli`. |
+| `cli/` | Typer app, commands, renderers, `paths.py`, and **`wiring.py`** — the composition root that constructs concrete infrastructure adapters and injects them into `MonitoringService`. | None within the project; everything else flows through `application`. |
 
-The CLI never reaches into the domain or persistence layers directly. That's the rule that keeps the service surface small enough to swap out — for tests, for a future REST adapter, or for a different storage backend.
+The key inversion: `application/` declares the persistence and scanner
+seams as `typing.Protocol` types in `application/ports.py`. The concrete
+repositories and `FileScanner` in `infrastructure/` satisfy those Protocols
+**structurally** — no inheritance required. The CLI's `wiring.py` builds the
+adapters and hands them to `MonitoringService` at construction time. That's
+why `application/` can be grepped clean of any `from ..infrastructure` import:
+
+```bash
+grep -rE "from \.\.(infrastructure)" src/codeguard/application/    # empty
+```
+
+Why this matters: the application layer can be unit-tested against in-memory
+fakes that satisfy the same Protocols, and the SQLite backend can be swapped
+for another store without touching `application/`. That is dependency inversion
+in the Clean Architecture sense — and it follows the canonical Python guidance
+in [*Architecture Patterns with Python*](https://www.cosmicpython.com/book/chapter_04_service_layer.html)
+chapter 4.
 
 ## 3. Class diagram
 
-Scoped to highlight the polymorphism showpiece (`AlertRule` hierarchy) and the composition spine (`MonitoringService` and the repositories). Domain dataclasses are shown as plain boxes.
+Scoped to highlight the polymorphism showpiece (`AlertRule` hierarchy), the
+composition spine (`MonitoringService` and the repositories), and the
+dependency-inversion seam (the Protocols in `application/ports.py`).
 
 ```mermaid
 classDiagram
@@ -67,16 +89,35 @@ classDiagram
     }
     AlertManager o-- AlertRule
 
+    class FileScannerProtocol {
+        <<Protocol>>
+        +scan(project_root) ScanResult
+    }
     class FileScanner {
         +scan(project_root) ScanResult
     }
     class FileHasher
     class IgnoreMatcher
+    FileScanner ..|> FileScannerProtocol : structural
     FileScanner *-- FileHasher
     FileScanner *-- IgnoreMatcher
 
     class SnapshotDiffer {
         +diff(baseline, current) list~FileChange~
+    }
+
+    class BaselineRepositoryProtocol {
+        <<Protocol>>
+        +save(snapshot) BaselineRecord
+        +find() BaselineRecord | None
+    }
+    class ScanHistoryRepositoryProtocol {
+        <<Protocol>>
+        +record_scan(...) ScanRecord
+        +list_scans(limit) list~ScanRecord~
+        +get_scan(id) ScanRecord | None
+        +latest_scan() ScanRecord | None
+        +alerts_for_scan(id) list~Alert~
     }
 
     class MonitoringService {
@@ -86,7 +127,9 @@ classDiagram
         +list_history(path, limit) list~ScanRecord~
         +latest_baseline(path) BaselineRecord | None
     }
-    MonitoringService o-- FileScanner
+    MonitoringService o-- FileScannerProtocol
+    MonitoringService o-- BaselineRepositoryProtocol
+    MonitoringService o-- ScanHistoryRepositoryProtocol
     MonitoringService o-- SnapshotDiffer
     MonitoringService o-- AlertManager
 
@@ -105,9 +148,18 @@ classDiagram
         +latest_scan() ScanRecord | None
         +alerts_for_scan(id) list~Alert~
     }
+    BaselineRepository ..|> BaselineRepositoryProtocol : structural
+    ScanHistoryRepository ..|> ScanHistoryRepositoryProtocol : structural
     BaselineRepository o-- Database
     ScanHistoryRepository o-- Database
-    MonitoringService ..> Database : per-call factory
+
+    class build_monitoring_service {
+        +(project_root) MonitoringService
+    }
+    build_monitoring_service ..> MonitoringService : constructs
+    build_monitoring_service ..> BaselineRepository : constructs
+    build_monitoring_service ..> ScanHistoryRepository : constructs
+    build_monitoring_service ..> FileScanner : constructs
 
     class Snapshot
     class FileMetadata
@@ -117,16 +169,23 @@ classDiagram
     class ChangeType
 ```
 
+The dotted `..|>` arrows mark **structural conformance**: `BaselineRepository`,
+`ScanHistoryRepository`, and `FileScanner` satisfy the corresponding Protocols
+without inheriting from them. `cli/wiring.py::build_monitoring_service` is the
+composition root — the only place where the application layer meets the
+concrete adapters.
+
 ## 4. OOP-concept map
 
 | Concept | Where | Why this matters |
 |---------|-------|------------------|
-| **Inheritance** | `core/rules/base.py` (`AlertRule(ABC)`) + 5 concrete subclasses in `core/rules/`. | New rule = one new subclass. No edits to `AlertManager`, no central registry switch-statement. |
-| **Polymorphism** | `core/rules/manager.py::AlertManager.evaluate` iterates `self._rules` and calls `rule.evaluate(change)` on each. No `isinstance` check. | The whole rule engine is one for-loop. Adding `MockFileRule` didn't touch `AlertManager`. |
-| **Composition** | `MonitoringService.__init__` injects `FileScanner`, `SnapshotDiffer`, `AlertManager`, and a `database_factory`. `FileScanner` composes `FileHasher` + `IgnoreMatcher`. Repositories compose `Database`. | Constructor injection means every collaborator is replaceable in tests; the service has no static singletons. |
+| **Inheritance** | `domain/rules/base.py` (`AlertRule(ABC)`) + 5 concrete subclasses in `domain/rules/`. | New rule = one new subclass. No edits to `AlertManager`, no central registry switch-statement. |
+| **Polymorphism** | `domain/rules/manager.py::AlertManager.evaluate` iterates `self._rules` and calls `rule.evaluate(change)` on each. No `isinstance` check. | The whole rule engine is one for-loop. Adding `MockFileRule` didn't touch `AlertManager`. |
+| **Composition** | `MonitoringService.__init__` accepts `baseline_repo`, `scan_history_repo`, and `scanner` (required) plus `differ` and `alert_manager` (defaulted). `FileScanner` composes `FileHasher` + `IgnoreMatcher`. Repositories compose `Database`. | Constructor injection means every collaborator is replaceable in tests; the service has no static singletons. |
 | **Encapsulation** | Private-by-convention attributes throughout (`_path`, `_initialized`, `_scanner`, `_rules`, `_logger`). Public surface goes through methods/properties. | Repositories never expose the SQLite connection; the service never exposes its database factory. The boundary holds. |
-| **Association** | CLI commands instantiate `MonitoringService()` (constructor with all-defaults) and call its public methods only. | The CLI cannot reach the scanner or repositories directly — the service is the only seam. |
+| **Dependency inversion** | `application/ports.py` defines `BaselineRepositoryProtocol`, `ScanHistoryRepositoryProtocol`, and `FileScannerProtocol`. `MonitoringService` depends on those abstractions; concrete `BaselineRepository` / `ScanHistoryRepository` / `FileScanner` in `infrastructure/` satisfy them structurally (no inheritance). The CLI's `cli/wiring.py::build_monitoring_service` constructs the adapters and injects them. | The high-level policy (the application layer) does not depend on the low-level details (SQLite, the filesystem). The seam earns its keep: tests can substitute in-memory fakes, and the persistence backend is swappable without touching `application/`. |
 | **Abstract base class** | `AlertRule(ABC)` with `@abstractmethod evaluate(self, change) -> Alert \| None`. | Forces every rule to commit to the same contract. Trying to instantiate a rule that forgets `evaluate()` fails at class creation. |
+| **Composition root** | `cli/wiring.py::build_monitoring_service(project_root)` is the single place where `Database`, `BaselineRepository`, `ScanHistoryRepository`, and `FileScanner` are instantiated and wired into `MonitoringService`. CLI commands call it and otherwise stay thin. | Concentrating the wiring in one factory means the rest of the codebase never has to know about concrete adapter types. |
 
 ## 5. Domain types
 
@@ -165,7 +224,7 @@ Concrete rules:
 
 ## 7. Persistence model
 
-One SQLite database per project at `<project>/.codeguard/codeguard.db`. Schema (defined in `persistence/database.py`):
+One SQLite database per project at `<project>/.codeguard/codeguard.db`. Schema (defined in `infrastructure/persistence/database.py`):
 
 | Table | Purpose |
 |-------|---------|
@@ -273,6 +332,6 @@ Every command also takes `--json`: success and expected-failure output go to std
 ## 10. Out of scope (intentional)
 
 - **No watch / daemon mode.** On-demand only. A future `watch` (file-system event loop) and `dashboard` (TUI) are deliberately deferred — `review` covers the daily-use case without them.
-- **No user-configurable rule files.** Rules live in `core/rules/`; adding one is a Python class, not a YAML schema.
+- **No user-configurable rule files.** Rules live in `domain/rules/`; adding one is a Python class, not a YAML schema.
 - **No multi-project / global database.** One DB per project, isolated under `<project>/.codeguard/`.
 - **No file-content diff display.** That's `git diff`'s job; CodeGuard reports the *fact* of the change and its severity.

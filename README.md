@@ -91,12 +91,34 @@ The first run captures a baseline against the freshly checked-out tree; the seco
 
 ## Project layout
 
-- `src/codeguard/domain/` — pure data types (no I/O).
-- `src/codeguard/core/` — scanner, hasher, differ, alert rules.
-- `src/codeguard/persistence/` — SQLite database and repositories.
-- `src/codeguard/services/` — `MonitoringService` facade.
-- `src/codeguard/cli/` — Typer commands and renderers.
-- `docs/architecture.md` — class diagram, OOP map, sequence diagrams.
+```
+src/codeguard/
+├── domain/              # Pure data + domain logic (entities, differ, rules). No I/O.
+├── application/         # MonitoringService + DTOs + repository/scanner Protocols.
+├── infrastructure/      # I/O adapters: filesystem (scanner, hasher) and SQLite persistence.
+└── cli/                 # Typer commands, output renderers, wiring.py composition root.
+```
+
+## Architecture at a glance
+
+CodeGuard follows Clean Architecture. Dependencies flow inward only:
+
+```
+cli  →  application  →  domain
+cli  →  infrastructure  →  domain
+cli wires infrastructure into application at construction time
+```
+
+`application/` never imports `infrastructure/`. Instead it declares
+`BaselineRepositoryProtocol`, `ScanHistoryRepositoryProtocol`, and
+`FileScannerProtocol` (`application/ports.py`) and depends on those
+abstractions. The concrete SQLite repositories and the filesystem scanner are
+constructed in `cli/wiring.py` (the composition root) and injected into
+`MonitoringService`. This keeps the application layer testable in isolation
+and makes the persistence backend swappable.
+
+See [`docs/architecture.md`](docs/architecture.md) for the full design overview
+including class diagram, OOP map, and sequence diagrams.
 
 ## License
 
