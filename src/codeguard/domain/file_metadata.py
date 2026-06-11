@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass
 class FileMetadata:
     """Identity and integrity information for one file in a Snapshot.
 

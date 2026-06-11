@@ -14,7 +14,7 @@ from datetime import datetime
 from ..domain import Snapshot
 
 
-@dataclass(slots=True)
+@dataclass
 class BaselineRecord:
     """Stored baseline plus its captured snapshot."""
 
@@ -23,7 +23,7 @@ class BaselineRecord:
     snapshot: Snapshot
 
 
-@dataclass(slots=True)
+@dataclass
 class ScanRecord:
     """Summary row for one persisted scan."""
 
@@ -36,7 +36,7 @@ class ScanRecord:
     critical_count: int
 
 
-@dataclass(slots=True)
+@dataclass
 class ScanResult:
     """Outcome of a filesystem scan: the snapshot plus any files that were skipped."""
 

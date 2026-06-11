@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from .file_metadata import FileMetadata
 
 
-@dataclass(slots=True)
+@dataclass
 class Snapshot:
     """A collection of FileMetadata describing a project at one point in time."""
 

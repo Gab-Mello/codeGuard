@@ -30,7 +30,7 @@ _SEVERITY_RANK: dict[Severity, int] = {
 }
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass
 class Alert:
     """A contextual alert raised about a specific file change.
 

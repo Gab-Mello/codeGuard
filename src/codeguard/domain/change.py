@@ -14,7 +14,7 @@ class ChangeType(str, Enum):
     DELETED = "DELETED"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass
 class FileChange:
     """A single detected change between two snapshots.
 

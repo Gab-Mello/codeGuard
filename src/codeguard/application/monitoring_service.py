@@ -57,7 +57,7 @@ class ScanNotFoundError(Exception):
         self.scan_id = scan_id
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass
 class BaselineOutcome:
     """Result of `create_baseline`: the persisted record plus any skipped paths."""
 
@@ -65,7 +65,7 @@ class BaselineOutcome:
     skipped: list[tuple[str, str]] = field(default_factory=list)
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass
 class ScanOutcome:
     """Result of `scan`: the persisted record plus the changes, alerts, and skips."""
 
