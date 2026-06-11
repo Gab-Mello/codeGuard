@@ -22,10 +22,6 @@ class FileHasher:
             raise ValueError("chunk_size must be positive")
         self._chunk_size = chunk_size
 
-    @property
-    def chunk_size(self) -> int:
-        return self._chunk_size
-
     def hash_file(self, path: Path | str) -> str:
         """Return the lowercase 64-character hex SHA-256 digest of `path`."""
         digest = hashlib.sha256()

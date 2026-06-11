@@ -45,10 +45,6 @@ class IgnoreMatcher:
             p for p in chosen if "/" in p
         )
 
-    @property
-    def patterns(self) -> tuple[str, ...]:
-        return self._segment_patterns + self._path_patterns
-
     def matches(self, relative_posix_path: str) -> bool:
         """Return True if the path should be ignored."""
         if not relative_posix_path:

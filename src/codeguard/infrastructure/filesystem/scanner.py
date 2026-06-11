@@ -26,14 +26,6 @@ class FileScanner:
         self._hasher = hasher or FileHasher()
         self._ignore = ignore_matcher or IgnoreMatcher()
 
-    @property
-    def hasher(self) -> FileHasher:
-        return self._hasher
-
-    @property
-    def ignore_matcher(self) -> IgnoreMatcher:
-        return self._ignore
-
     def scan(self, project_root: Path | str) -> ScanResult:
         """Scan `project_root` and return its snapshot together with any skips.
 

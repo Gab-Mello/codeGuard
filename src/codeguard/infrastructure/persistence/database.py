@@ -123,10 +123,6 @@ class Database:
         self._path = Path(path)
         self._initialized = False
 
-    @property
-    def path(self) -> Path:
-        return self._path
-
     def initialize(self) -> None:
         """Create the database file (and parent directories) and apply schema.
 
