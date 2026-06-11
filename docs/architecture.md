@@ -189,7 +189,7 @@ concrete adapters.
 
 ## 5. Domain types
 
-Everything in `domain/` is a frozen dataclass with `slots=True` (or a `str`-backed `Enum`):
+Everything in `domain/` is a plain `@dataclass` (or a `str`-backed `Enum`). Validation lives in `__post_init__` where it applies:
 
 - **`FileMetadata`** — `(relative_path, size_bytes, modified_at, sha256)`. The atomic identity of a file at a moment in time.
 - **`Snapshot`** — `(project_root, files: dict[str, FileMetadata], created_at, snapshot_id)`. A keyed map of file metadata; what `FileScanner` produces.
