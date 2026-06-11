@@ -16,45 +16,37 @@ without dragging in a parser.
 from __future__ import annotations
 
 import fnmatch
-from collections.abc import Iterable
 
 
-class IgnoreMatcher:
-    DEFAULT_PATTERNS: tuple[str, ...] = (
-        ".git",
-        ".codeguard",
-        "__pycache__",
-        ".venv",
-        "venv",
-        "node_modules",
-        "dist",
-        "build",
-        ".idea",
-        ".vscode",
-        ".DS_Store",
-        "*.pyc",
-        "*.log",
-    )
+IGNORE_PATTERNS: tuple[str, ...] = (
+    ".git",
+    ".codeguard",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "node_modules",
+    "dist",
+    "build",
+    ".idea",
+    ".vscode",
+    ".DS_Store",
+    "*.pyc",
+    "*.log",
+)
 
-    def __init__(self, patterns: Iterable[str] | None = None) -> None:
-        chosen = self.DEFAULT_PATTERNS if patterns is None else tuple(patterns)
-        self._segment_patterns: tuple[str, ...] = tuple(
-            p for p in chosen if "/" not in p
-        )
-        self._path_patterns: tuple[str, ...] = tuple(
-            p for p in chosen if "/" in p
-        )
+_SEGMENT_PATTERNS: tuple[str, ...] = tuple(p for p in IGNORE_PATTERNS if "/" not in p)
+_PATH_PATTERNS: tuple[str, ...] = tuple(p for p in IGNORE_PATTERNS if "/" in p)
 
-    def matches(self, relative_posix_path: str) -> bool:
-        """Return True if the path should be ignored."""
-        if not relative_posix_path:
-            return False
-        for full_pat in self._path_patterns:
-            if fnmatch.fnmatchcase(relative_posix_path, full_pat):
-                return True
-        if self._segment_patterns:
-            for segment in relative_posix_path.split("/"):
-                for seg_pat in self._segment_patterns:
-                    if fnmatch.fnmatchcase(segment, seg_pat):
-                        return True
+
+def should_ignore(relative_posix_path: str) -> bool:
+    """Return True if `relative_posix_path` matches any ignore pattern."""
+    if not relative_posix_path:
         return False
+    for full_pat in _PATH_PATTERNS:
+        if fnmatch.fnmatchcase(relative_posix_path, full_pat):
+            return True
+    for segment in relative_posix_path.split("/"):
+        for seg_pat in _SEGMENT_PATTERNS:
+            if fnmatch.fnmatchcase(segment, seg_pat):
+                return True
+    return False

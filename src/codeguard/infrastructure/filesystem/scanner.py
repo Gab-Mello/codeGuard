@@ -8,21 +8,11 @@ from pathlib import Path
 from ...application.dto import ScanResult
 from ...domain import FileMetadata, Snapshot
 from .hashing import hash_file
-from .ignore import IgnoreMatcher
+from .ignore import should_ignore
 
 
 class FileScanner:
-    """Walks a project folder and produces a Snapshot of its files.
-
-    The ignore matcher is constructor-injected so it can be replaced,
-    for example with a stricter ignore set in tests.
-    """
-
-    def __init__(
-        self,
-        ignore_matcher: IgnoreMatcher | None = None,
-    ) -> None:
-        self._ignore = ignore_matcher or IgnoreMatcher()
+    """Walks a project folder and produces a Snapshot of its files."""
 
     def scan(self, project_root: Path | str) -> ScanResult:
         """Scan `project_root` and return its snapshot together with any skips.
@@ -48,12 +38,12 @@ class FileScanner:
             # Mutate dirnames in place so os.walk skips ignored subtrees.
             dirnames[:] = [
                 d for d in dirnames
-                if not self._ignore.matches(self._join_rel(rel_dir, d))
+                if not should_ignore(self._join_rel(rel_dir, d))
             ]
 
             for name in filenames:
                 rel_file = self._join_rel(rel_dir, name)
-                if self._ignore.matches(rel_file):
+                if should_ignore(rel_file):
                     continue
                 file_path = current / name
                 try:
