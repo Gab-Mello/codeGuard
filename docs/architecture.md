@@ -4,7 +4,7 @@ CodeGuard is a CLI that snapshots a project's trusted state and reports unexpect
 
 ## 1. What CodeGuard is (and isn't)
 
-CodeGuard records each tracked file's size, modification time, and SHA-256 in a per-project SQLite database, then compares later snapshots against that baseline. Each diff entry is run through a small set of rules that emit severity-tagged alerts. Six commands form the user surface: `init`, `review`, `scan`, `status`, `alerts`, and `history`.
+CodeGuard records each tracked file's size, modification time, and SHA-256 in a per-project SQLite database, then compares later snapshots against that baseline. Each diff entry is run through a small set of rules that emit severity-tagged alerts. Five commands form the user surface: `init`, `scan`, `status`, `alerts`, and `history`.
 
 It is **not**:
 
@@ -131,7 +131,7 @@ sequenceDiagram
 
 `AlertManager.evaluate` is where polymorphic dispatch happens: each registered rule is invoked through the abstract `evaluate` method, regardless of its concrete subclass.
 
-The remaining commands (`status`, `history`, `alerts`, and `review`) read through the same repositories without invoking `FileScanner`, `diff_snapshots`, or `AlertManager`. The exception is `review`, which is a `scan` followed by a prioritised renderer.
+The remaining commands (`status`, `history`, and `alerts`) read through the same repositories without invoking `FileScanner`, `diff_snapshots`, or `AlertManager`.
 
 ## 7. Persistence model
 
@@ -157,7 +157,7 @@ Two repositories own the SQL: `BaselineRepository` (`save`, `find`) and `ScanHis
 | `0` | Success. |
 | `1` | Runtime error: SQLite error or unexpected exception. |
 | `2` | Invalid usage: bad path, missing baseline, scan not found, invalid option. |
-| `3` | CRITICAL alerts fired and `scan --fail-on-critical` (or `review --fail-on-critical`) was passed. |
+| `3` | CRITICAL alerts fired and `scan --fail-on-critical` was passed. |
 
 Every command accepts `--json`: success and expected-failure output go to stdout as a JSON object; runtime errors stay on stderr regardless. The shape is stable per command and matches what `cli/output.py` emits.
 
