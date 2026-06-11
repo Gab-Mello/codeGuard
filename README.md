@@ -8,10 +8,6 @@ AI assistants, scripts, and automation tools frequently modify project files. Th
 
 CodeGuard is not a replacement for Git. Git tracks the changes you make on purpose; CodeGuard watches the working tree against a trusted baseline and flags edits — committed or not — that you may not have meant to keep.
 
-## Status
-
-`v0.1` — all six commands implemented and CI-ready. See [`docs/architecture.md`](docs/architecture.md) for the design overview.
-
 ## Requirements
 
 - Python 3.10+
