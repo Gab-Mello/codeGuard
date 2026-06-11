@@ -1,12 +1,12 @@
 # CodeGuard
 
-A command-line tool that snapshots a project's trusted state and detects unexpected changes — with severity-aware alerts for the files that matter most (`.env`, dependency manifests, Dockerfiles, migrations, generated mocks).
+A command-line tool that snapshots a project's trusted state and detects unexpected changes, with severity-aware alerts for the files that matter most (`.env`, dependency manifests, Dockerfiles, migrations, generated mocks).
 
 ## Why
 
 AI assistants, scripts, and automation tools frequently modify project files. That's often useful, but it can silently change things you didn't intend to change. CodeGuard lets you snapshot a trusted state of a project and later see exactly what drifted.
 
-CodeGuard is not a replacement for Git. Git tracks the changes you make on purpose; CodeGuard watches the working tree against a trusted baseline and flags edits — committed or not — that you may not have meant to keep.
+CodeGuard is not a replacement for Git. Git tracks the changes you make on purpose; CodeGuard watches the working tree against a trusted baseline and flags edits (committed or not) that you may not have meant to keep.
 
 ## Requirements
 
@@ -40,7 +40,7 @@ codeguard history [PATH] [--limit N | -n N] [--json]                 # list prev
 
 ```bash
 $ codeguard init                      # snapshot the baseline
-$ codeguard review                    # clean — no changes
+$ codeguard review                    # clean, no changes
 $ echo "SECRET=changed" >> .env       # something modifies a tracked file
 $ codeguard review --fail-on-critical # CRITICAL alert with next-step suggestions; exit 3
 $ codeguard history                   # both scans, newest first
