@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..domain.differ import SnapshotDiffer
+from ..domain.differ import diff_snapshots
 from ..domain.rules import AlertManager, default_rules
 from ..domain import Alert, FileChange
 from .dto import BaselineRecord, ScanRecord
@@ -78,7 +78,7 @@ class ScanOutcome:
 class MonitoringService:
     """Single facade the CLI talks to.
 
-    Wires the scanner, differ, alert manager, and repositories together so
+    Wires the scanner, alert manager, and repositories together so
     callers never reach into them directly. Collaborators are constructor-
     injected: the application layer depends on protocols, and concrete
     infrastructure adapters are provided by the entry point (the CLI's
@@ -91,13 +91,11 @@ class MonitoringService:
         baseline_repo: BaselineRepositoryProtocol,
         scan_history_repo: ScanHistoryRepositoryProtocol,
         scanner: FileScannerProtocol,
-        differ: SnapshotDiffer | None = None,
         alert_manager: AlertManager | None = None,
     ) -> None:
         self._baseline_repo = baseline_repo
         self._scan_history_repo = scan_history_repo
         self._scanner = scanner
-        self._differ = differ or SnapshotDiffer()
         self._alert_manager = alert_manager or AlertManager(default_rules())
 
     def create_baseline(
@@ -141,7 +139,7 @@ class MonitoringService:
 
         started_at = datetime.now(timezone.utc)
         scan = self._scanner.scan(root)
-        changes = self._differ.diff(baseline.snapshot, scan.snapshot)
+        changes = diff_snapshots(baseline.snapshot, scan.snapshot)
         alerts = self._alert_manager.evaluate(changes)
         history_repo = self._scan_history_repo
         record = history_repo.record_scan(

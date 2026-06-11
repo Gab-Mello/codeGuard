@@ -30,7 +30,7 @@ flowchart LR
 
 | Layer | Owns | Forbidden imports |
 |-------|------|-------------------|
-| `domain/` | Entities (`Snapshot`, `FileMetadata`, `FileChange`, `Alert`, `Severity`), `SnapshotDiffer`, the `AlertRule` hierarchy and `AlertManager`. Pure: no I/O, no SQL. | Everything outward. |
+| `domain/` | Entities (`Snapshot`, `FileMetadata`, `FileChange`, `Alert`, `Severity`), the `diff_snapshots` helper, the `AlertRule` hierarchy and `AlertManager`. Pure: no I/O, no SQL. | Everything outward. |
 | `application/` | `MonitoringService` (use-case façade), DTOs (`BaselineRecord`, `ScanRecord`, `ScanResult`), and Protocols (`BaselineRepositoryProtocol`, `ScanHistoryRepositoryProtocol`, `FileScannerProtocol`). | `infrastructure`, `cli`. |
 | `infrastructure/` | I/O adapters under `infrastructure/filesystem/` (scanner, hasher, ignore matcher) and `infrastructure/persistence/` (`Database`, repositories). Each adapter satisfies an application Protocol structurally. | `application`, `cli`. |
 | `cli/` | Typer app, commands, renderers, and `wiring.py`, the composition root that constructs the infrastructure adapters and injects them into `MonitoringService`. | None within the project; everything else flows through `application`. |
@@ -43,7 +43,7 @@ The application layer declares its persistence and scanning needs as `typing.Pro
 |---------|----------------|-----------------|
 | **Inheritance** | `domain/rules/base.py` declares `AlertRule(ABC)`; `domain/rules/` adds five concrete subclasses. | Adding a rule means writing one class, with no central registry to edit. |
 | **Polymorphism** | `domain/rules/manager.py::AlertManager.evaluate` iterates over the registered rules and calls `rule.evaluate(change)`. No `isinstance` check. | The rule engine stays a single loop regardless of how many rules exist. |
-| **Composition** | `MonitoringService` is constructed with its repositories and scanner. `FileScanner` composes `IgnoreMatcher` and uses the `hash_file` helper. Repositories compose `Database`. | Every collaborator is replaceable; nothing is reached through a global. |
+| **Composition** | `MonitoringService` is constructed with its repositories and scanner. `FileScanner` composes `IgnoreMatcher` and uses the `hash_file` helper. `MonitoringService` calls the `diff_snapshots` helper directly. Repositories compose `Database`. | Every collaborator is replaceable; nothing is reached through a global. |
 | **Encapsulation** | Private-by-convention attributes (`_path`, `_rules`, `_db`, …); SQL is confined to the repository classes; the database connection is never exposed. | Layer boundaries hold; callers depend on intent, not on storage details. |
 | **Abstraction** | `AlertRule(ABC)` plus `@abstractmethod evaluate`; `Database.connect()` exposed as a context manager. | The rule contract is enforced at class-creation time; transaction handling is centralised. |
 | **Dependency inversion** | `application/ports.py` defines repository and scanner Protocols. `MonitoringService` depends on those Protocols; concrete implementations in `infrastructure/` satisfy them structurally. `cli/wiring.py` is the only place where the two layers meet. | The application layer is testable with in-memory fakes and is unaware of SQLite or the filesystem. |
@@ -114,7 +114,6 @@ sequenceDiagram
     participant CLI as cli/commands/scan
     participant Svc as MonitoringService
     participant Scn as FileScanner
-    participant Diff as SnapshotDiffer
     participant AM as AlertManager
     participant Hr as ScanHistoryRepository
 
@@ -122,8 +121,7 @@ sequenceDiagram
     CLI->>Svc: scan(path)
     Svc->>Scn: scan(path)
     Scn-->>Svc: ScanResult
-    Svc->>Diff: diff(baseline, current)
-    Diff-->>Svc: list[FileChange]
+    Svc->>Svc: diff_snapshots(baseline, current)
     Svc->>AM: evaluate(changes)
     AM-->>Svc: list[Alert]
     Svc->>Hr: record_scan(...)
@@ -133,7 +131,7 @@ sequenceDiagram
 
 `AlertManager.evaluate` is where polymorphic dispatch happens: each registered rule is invoked through the abstract `evaluate` method, regardless of its concrete subclass.
 
-The remaining commands (`status`, `history`, `alerts`, and `review`) read through the same repositories without invoking `FileScanner`, `SnapshotDiffer`, or `AlertManager`. The exception is `review`, which is a `scan` followed by a prioritised renderer.
+The remaining commands (`status`, `history`, `alerts`, and `review`) read through the same repositories without invoking `FileScanner`, `diff_snapshots`, or `AlertManager`. The exception is `review`, which is a `scan` followed by a prioritised renderer.
 
 ## 7. Persistence model
 
