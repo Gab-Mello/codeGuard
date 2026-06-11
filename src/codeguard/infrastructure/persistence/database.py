@@ -15,18 +15,6 @@ _logger = logging.getLogger(__name__)
 _SCHEMA_VERSION = 1
 
 
-class SchemaVersionMismatchError(RuntimeError):
-    """Raised when an existing database was written by a different schema version."""
-
-    def __init__(self, found: int, expected: int) -> None:
-        super().__init__(
-            f"database schema version {found} is incompatible with "
-            f"this CodeGuard build (expected {expected})"
-        )
-        self.found = found
-        self.expected = expected
-
-
 _SCHEMA_STATEMENTS: tuple[str, ...] = (
     """
     CREATE TABLE IF NOT EXISTS snapshots (
@@ -126,23 +114,19 @@ class Database:
     def initialize(self) -> None:
         """Create the database file (and parent directories) and apply schema.
 
-        Stamps `PRAGMA user_version` with `_SCHEMA_VERSION` on a fresh database
-        and refuses to open one written by an incompatible build.
+        Stamps `PRAGMA user_version` with `_SCHEMA_VERSION` on a fresh database;
+        re-applies the schema idempotently on an existing one (every statement
+        uses `IF NOT EXISTS`).
         """
         self._path.parent.mkdir(parents=True, exist_ok=True)
         conn = self._raw_connect()
         try:
             with conn:
                 found = conn.execute("PRAGMA user_version").fetchone()[0]
+                for statement in _SCHEMA_STATEMENTS:
+                    conn.execute(statement)
                 if found == 0:
-                    for statement in _SCHEMA_STATEMENTS:
-                        conn.execute(statement)
                     conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
-                elif found != _SCHEMA_VERSION:
-                    raise SchemaVersionMismatchError(found, _SCHEMA_VERSION)
-                else:
-                    for statement in _SCHEMA_STATEMENTS:
-                        conn.execute(statement)
         finally:
             conn.close()
         self._initialized = True
