@@ -24,12 +24,12 @@ The repository is runnable without installation: `python3 main.py <command>` wor
 ## Usage
 
 ```text
-codeguard init    [PATH] [--force] [--json]                          # snapshot the trusted baseline
-codeguard review  [PATH] [--top N] [--json] [--fail-on-critical]     # daily-use: prioritised view of what changed
-codeguard scan    [PATH] [--json] [--fail-on-critical]               # verbose / CI-friendly form of review
-codeguard status  [PATH] [--json]                                    # show baseline + latest scan
-codeguard alerts  [PATH] [--scan-id N] [--severity LEVEL] [--json]   # list alerts for a scan
-codeguard history [PATH] [--limit N | -n N] [--json]                 # list previous scans
+python3 main.py init    [PATH] [--force] [--json]                          # snapshot the trusted baseline
+python3 main.py review  [PATH] [--top N] [--json] [--fail-on-critical]     # daily-use: prioritised view of what changed
+python3 main.py scan    [PATH] [--json] [--fail-on-critical]               # verbose / CI-friendly form of review
+python3 main.py status  [PATH] [--json]                                    # show baseline + latest scan
+python3 main.py alerts  [PATH] [--scan-id N] [--severity LEVEL] [--json]   # list alerts for a scan
+python3 main.py history [PATH] [--limit N | -n N] [--json]                 # list previous scans
 ```
 
 `review` is the daily-use command after an AI assistant or script edits your project: it runs a scan, then surfaces the items most worth a human's attention along with concrete next steps. `scan` is the same operation with the full unfiltered output, suited to CI logs.
@@ -39,12 +39,12 @@ codeguard history [PATH] [--limit N | -n N] [--json]                 # list prev
 ## Example session
 
 ```bash
-$ codeguard init                      # snapshot the baseline
-$ codeguard review                    # clean, no changes
-$ echo "SECRET=changed" >> .env       # something modifies a tracked file
-$ codeguard review --fail-on-critical # CRITICAL alert with next-step suggestions; exit 3
-$ codeguard history                   # both scans, newest first
-$ codeguard alerts --scan-id 2        # the alerts persisted for scan #2
+$ python3 main.py init                      # snapshot the baseline
+$ python3 main.py review                    # clean, no changes
+$ echo "SECRET=changed" >> .env             # something modifies a tracked file
+$ python3 main.py review --fail-on-critical # CRITICAL alert with next-step suggestions; exit 3
+$ python3 main.py history                   # both scans, newest first
+$ python3 main.py alerts --scan-id 2        # the alerts persisted for scan #2
 ```
 
 ## Exit codes
@@ -64,7 +64,7 @@ CodeGuard's exit codes and `--json` output make it easy to wire into hooks and C
 
 ```sh
 #!/bin/sh
-python /path/to/codeGuard/main.py review . --fail-on-critical
+python3 /path/to/codeGuard/main.py review . --fail-on-critical
 ```
 
 ## Project layout
