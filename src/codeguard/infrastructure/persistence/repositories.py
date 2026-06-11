@@ -26,69 +26,67 @@ def _parse_iso(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 
-class _SnapshotWriter:
-    """Internal helper that persists a Snapshot and its FileMetadata rows."""
-
-    @staticmethod
-    def insert(conn: sqlite3.Connection, snapshot: Snapshot) -> int:
-        created_at = snapshot.created_at.isoformat()
-        cursor = conn.execute(
-            "INSERT INTO snapshots(project_root, created_at) VALUES (?, ?)",
-            (snapshot.project_root, created_at),
-        )
-        snapshot_id = int(cursor.lastrowid)
-        if snapshot.files:
-            conn.executemany(
-                """
-                INSERT INTO file_metadata(
-                    snapshot_id, relative_path, size_bytes, modified_at, sha256
-                ) VALUES (?, ?, ?, ?, ?)
-                """,
-                [
-                    (
-                        snapshot_id,
-                        meta.relative_path,
-                        meta.size_bytes,
-                        meta.modified_at,
-                        meta.sha256,
-                    )
-                    for meta in snapshot.files.values()
-                ],
-            )
-        snapshot.snapshot_id = snapshot_id
-        return snapshot_id
-
-    @staticmethod
-    def load(conn: sqlite3.Connection, snapshot_id: int) -> Snapshot:
-        row = conn.execute(
-            "SELECT id, project_root, created_at FROM snapshots WHERE id = ?",
-            (snapshot_id,),
-        ).fetchone()
-        if row is None:
-            raise LookupError(f"Snapshot {snapshot_id} not found")
-        snapshot = Snapshot(
-            project_root=row["project_root"],
-            created_at=_parse_iso(row["created_at"]),
-            snapshot_id=int(row["id"]),
-        )
-        files = conn.execute(
+def _insert_snapshot(conn: sqlite3.Connection, snapshot: Snapshot) -> int:
+    """Persist a Snapshot and its FileMetadata rows; return the new snapshot id."""
+    created_at = snapshot.created_at.isoformat()
+    cursor = conn.execute(
+        "INSERT INTO snapshots(project_root, created_at) VALUES (?, ?)",
+        (snapshot.project_root, created_at),
+    )
+    snapshot_id = int(cursor.lastrowid)
+    if snapshot.files:
+        conn.executemany(
             """
-            SELECT relative_path, size_bytes, modified_at, sha256
-              FROM file_metadata
-             WHERE snapshot_id = ?
+            INSERT INTO file_metadata(
+                snapshot_id, relative_path, size_bytes, modified_at, sha256
+            ) VALUES (?, ?, ?, ?, ?)
             """,
-            (snapshot_id,),
-        ).fetchall()
-        for f in files:
-            snapshot.add(
-                FileMetadata(
-                    relative_path=f["relative_path"],
-                    size_bytes=int(f["size_bytes"]),
-                    modified_at=float(f["modified_at"]),
-                    sha256=f["sha256"],
+            [
+                (
+                    snapshot_id,
+                    meta.relative_path,
+                    meta.size_bytes,
+                    meta.modified_at,
+                    meta.sha256,
                 )
+                for meta in snapshot.files.values()
+            ],
+        )
+    snapshot.snapshot_id = snapshot_id
+    return snapshot_id
+
+
+def _load_snapshot(conn: sqlite3.Connection, snapshot_id: int) -> Snapshot:
+    """Reconstruct a Snapshot and its FileMetadata rows from the database."""
+    row = conn.execute(
+        "SELECT id, project_root, created_at FROM snapshots WHERE id = ?",
+        (snapshot_id,),
+    ).fetchone()
+    if row is None:
+        raise LookupError(f"Snapshot {snapshot_id} not found")
+    snapshot = Snapshot(
+        project_root=row["project_root"],
+        created_at=_parse_iso(row["created_at"]),
+        snapshot_id=int(row["id"]),
+    )
+    files = conn.execute(
+        """
+        SELECT relative_path, size_bytes, modified_at, sha256
+          FROM file_metadata
+         WHERE snapshot_id = ?
+        """,
+        (snapshot_id,),
+    ).fetchall()
+    for f in files:
+        snapshot.add(
+            FileMetadata(
+                relative_path=f["relative_path"],
+                size_bytes=int(f["size_bytes"]),
+                modified_at=float(f["modified_at"]),
+                sha256=f["sha256"],
             )
-        return snapshot
+        )
+    return snapshot
 
 
 class BaselineRepository:
@@ -110,7 +108,7 @@ class BaselineRepository:
             if existing is not None:
                 # Cascade clears the old snapshot, scans, changes, and alerts.
                 conn.execute("DELETE FROM baselines WHERE id = ?", (existing["id"],))
-            snapshot_id = _SnapshotWriter.insert(conn, snapshot)
+            snapshot_id = _insert_snapshot(conn, snapshot)
             cursor = conn.execute(
                 """
                 INSERT INTO baselines(baseline_snapshot_id, created_at)
@@ -136,7 +134,7 @@ class BaselineRepository:
             ).fetchone()
             if row is None:
                 return None
-            snapshot = _SnapshotWriter.load(conn, int(row["baseline_snapshot_id"]))
+            snapshot = _load_snapshot(conn, int(row["baseline_snapshot_id"]))
         return BaselineRecord(
             baseline_id=int(row["id"]),
             created_at=_parse_iso(row["created_at"]),
@@ -164,7 +162,7 @@ class ScanHistoryRepository:
         change_list = list(changes)
         alert_list = list(alerts)
         with self._db.connect() as conn:
-            snapshot_id = _SnapshotWriter.insert(conn, snapshot)
+            snapshot_id = _insert_snapshot(conn, snapshot)
             cursor = conn.execute(
                 """
                 INSERT INTO scans(
