@@ -1,4 +1,4 @@
-"""`codeguard review` — prioritised, action-oriented view of the latest scan."""
+"""`codeguard review`: prioritised, action-oriented view of the latest scan."""
 
 from __future__ import annotations
 

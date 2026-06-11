@@ -8,7 +8,7 @@ Patterns are matched against POSIX-style relative paths in two flavors:
     (e.g. ".git" matches ".git", "pkg/.git", "pkg/.git/HEAD";
     "*.pyc" matches any segment ending in .pyc).
 
-This is intentionally simpler than full gitignore semantics — enough for
+This is intentionally simpler than full gitignore semantics, enough for
 the common cases (`.git`, `__pycache__`, `node_modules`, `*.pyc`, ...)
 without dragging in a parser.
 """

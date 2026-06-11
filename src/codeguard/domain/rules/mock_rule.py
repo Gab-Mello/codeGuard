@@ -16,7 +16,7 @@ class MockFileRule(AlertRule):
     Matches Go-style mock conventions (`mock_*.go`, `*_mock.go`), Python
     test-mock conventions (`mock_*.py`, `*_mock.py`), and any file inside
     a `mocks/` directory. Generated mocks should normally be regenerated
-    from their source interface — a hand edit, or a stale regeneration,
+    from their source interface; a hand edit, or a stale regeneration,
     is the kind of mistake worth surfacing.
     """
 

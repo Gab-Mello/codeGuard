@@ -10,7 +10,7 @@ from .base import AlertRule
 class MigrationRule(AlertRule):
     """Fires on changes to files inside a `migration` or `migrations` path.
 
-    Migrations are usually append-only — modifying or deleting an existing
+    Migrations are usually append-only. Modifying or deleting an existing
     one tends to indicate a destructive rewrite that may break environments
     that already applied the original. Reported at HIGH severity.
     """

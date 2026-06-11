@@ -3,7 +3,7 @@
 These structural-typing seams (`typing.Protocol`) describe the persistence
 surface `MonitoringService` needs without naming any concrete adapter. The
 SQLite-backed repositories in :mod:`codeguard.infrastructure.persistence`
-satisfy them implicitly — no inheritance required — and tests can supply
+satisfy them implicitly (no inheritance required), and tests can supply
 in-memory fakes the same way.
 """
 

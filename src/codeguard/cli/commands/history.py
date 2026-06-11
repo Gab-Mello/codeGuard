@@ -1,4 +1,4 @@
-"""`codeguard history` — list past scans newest-first."""
+"""`codeguard history`: list past scans newest-first."""
 
 from __future__ import annotations
 

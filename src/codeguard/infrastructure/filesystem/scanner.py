@@ -14,7 +14,7 @@ from .ignore import IgnoreMatcher
 class FileScanner:
     """Walks a project folder and produces a Snapshot of its files.
 
-    Collaborators are constructor-injected so they can be replaced — for
+    Collaborators are constructor-injected so they can be replaced, for
     example with a stricter ignore set or a faster hasher in tests.
     """
 

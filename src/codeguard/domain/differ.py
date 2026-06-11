@@ -9,7 +9,7 @@ from .snapshot import Snapshot
 class SnapshotDiffer:
     """Computes the set of file changes between two snapshots.
 
-    A file is MODIFIED only when its SHA-256 differs — size or mtime alone
+    A file is MODIFIED only when its SHA-256 differs. Size or mtime alone
     are not sufficient signals because mtime can be touched without content
     actually changing.
     """

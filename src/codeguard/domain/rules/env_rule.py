@@ -13,8 +13,8 @@ class EnvFileRule(AlertRule):
     """Fires on any change to a `.env` (or `.env.<variant>`) file.
 
     `.env` files typically hold secrets and per-environment configuration,
-    so any creation, modification, or deletion is treated as CRITICAL —
-    a deliberate review is needed before accepting the change.
+    so any creation, modification, or deletion is treated as CRITICAL.
+    A deliberate review is needed before accepting the change.
     """
 
     _VERBS: dict[ChangeType, str] = {

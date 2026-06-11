@@ -1,4 +1,4 @@
-"""`codeguard init` — capture the trusted baseline of a project."""
+"""`codeguard init`: capture the trusted baseline of a project."""
 
 from __future__ import annotations
 

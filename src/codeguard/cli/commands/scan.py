@@ -1,4 +1,4 @@
-"""`codeguard scan` — diff the project against its baseline and report changes."""
+"""`codeguard scan`: diff the project against its baseline and report changes."""
 
 from __future__ import annotations
 

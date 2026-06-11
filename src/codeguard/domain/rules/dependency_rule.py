@@ -14,8 +14,8 @@ class DependencyFileRule(AlertRule):
 
     A silent change to a manifest can pull in unexpected packages or
     versions, so any modification is reported at HIGH severity. Creation
-    and deletion are intentionally not flagged here — adding or removing
-    a manifest is usually a deliberate project-level decision.
+    and deletion are intentionally not flagged here, since adding or
+    removing a manifest is usually a deliberate project-level decision.
     """
 
     DEPENDENCY_FILES: frozenset[str] = frozenset({

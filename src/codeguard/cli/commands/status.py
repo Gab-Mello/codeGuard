@@ -1,4 +1,4 @@
-"""`codeguard status` — read-only summary of baseline + latest scan state."""
+"""`codeguard status`: read-only summary of baseline + latest scan state."""
 
 from __future__ import annotations
 

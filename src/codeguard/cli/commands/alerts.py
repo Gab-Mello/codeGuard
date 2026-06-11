@@ -1,4 +1,4 @@
-"""`codeguard alerts` — browse persisted alerts from past scans."""
+"""`codeguard alerts`: browse persisted alerts from past scans."""
 
 from __future__ import annotations
 
