@@ -73,7 +73,7 @@ python /path/to/codeGuard/main.py review . --fail-on-critical
 src/codeguard/
 ├── domain/              # Pure data + domain logic (entities, differ, rules). No I/O.
 ├── application/         # MonitoringService + DTOs + repository/scanner Protocols.
-├── infrastructure/      # I/O adapters: filesystem (scanner, hasher) and SQLite persistence.
+├── infrastructure/      # I/O adapters: filesystem (scanner) and SQLite persistence.
 └── cli/                 # Typer commands, output renderers, wiring.py composition root.
 ```
 

@@ -7,23 +7,21 @@ from pathlib import Path
 
 from ...application.dto import ScanResult
 from ...domain import FileMetadata, Snapshot
-from .hashing import FileHasher
+from .hashing import hash_file
 from .ignore import IgnoreMatcher
 
 
 class FileScanner:
     """Walks a project folder and produces a Snapshot of its files.
 
-    Collaborators are constructor-injected so they can be replaced, for
-    example with a stricter ignore set or a faster hasher in tests.
+    The ignore matcher is constructor-injected so it can be replaced,
+    for example with a stricter ignore set in tests.
     """
 
     def __init__(
         self,
-        hasher: FileHasher | None = None,
         ignore_matcher: IgnoreMatcher | None = None,
     ) -> None:
-        self._hasher = hasher or FileHasher()
         self._ignore = ignore_matcher or IgnoreMatcher()
 
     def scan(self, project_root: Path | str) -> ScanResult:
@@ -62,7 +60,7 @@ class FileScanner:
                     if file_path.is_symlink() or not file_path.is_file():
                         continue
                     stat = file_path.stat()
-                    digest = self._hasher.hash_file(file_path)
+                    digest = hash_file(file_path)
                 except OSError as exc:
                     skipped.append((rel_file, f"{type(exc).__name__}: {exc}"))
                     continue
