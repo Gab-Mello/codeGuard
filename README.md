@@ -117,8 +117,7 @@ constructed in `cli/wiring.py` (the composition root) and injected into
 `MonitoringService`. This keeps the application layer testable in isolation
 and makes the persistence backend swappable.
 
-See [`docs/architecture.md`](docs/architecture.md) for the full design overview
-including class diagram, OOP map, and sequence diagrams.
+See [`docs/architecture.md`](docs/architecture.md) for the architecture overview, OOP-concept map, command flows, and persistence model.
 
 ## License
 
