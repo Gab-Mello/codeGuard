@@ -2,6 +2,8 @@
 
 A command-line tool that snapshots a project's trusted state and detects unexpected changes, with severity-aware alerts for the files that matter most (`.env`, dependency manifests, Dockerfiles, migrations, generated mocks).
 
+This project was developed for an Object-Oriented Programming class.
+
 ## Why
 
 AI assistants, scripts, and automation tools frequently modify project files. That's often useful, but it can silently change things you didn't intend to change. CodeGuard lets you snapshot a trusted state of a project and later see exactly what drifted.
